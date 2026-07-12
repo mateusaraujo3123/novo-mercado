@@ -217,7 +217,7 @@ with aba_lista:
 
                 st.session_state.clientes = carregar_clientes()
 
-                st.success("Clientes atualizados com sucesso!")
+                st.success("Clientes updated com sucesso!")
 
                 st.rerun()
 
@@ -236,7 +236,7 @@ with aba_lista:
                 st.rerun()
 
         # ==========================================
-        # SEÇÃO DO GRÁFICO DE DEVEDORES
+        # APENAS O GRÁFICO ADICIONADO ABAIXO
         # ==========================================
         st.write("")
         st.subheader("📊 Gráfico de Maiores Devedores")
@@ -339,24 +339,23 @@ with aba_adicionar:
 
     else:
 
-        with st.form("form_adicionar_compra", clear_on_submit=True):
+        with st.form("adicionar_compra", clear_on_submit=True):
 
             lista_clientes = df_atual["Nome"].tolist()
             
             cliente_comprando = st.selectbox(
                 "Selecione o Cliente que está comprando:",
-                lista_clientes
+                lista_clientes,
+                key="sb_adicionar_compra"
             )
 
-            # Correção com .iloc[0] para extrair o valor de forma segura
-            linha_cliente = df_atual[df_atual["Nome"] == cliente_comprando]
-            divida_atual = float(pd.to_numeric(linha_cliente["Divida"], errors="coerce").fillna(0.0).iloc[0])
-            limite_atual = float(pd.to_numeric(linha_cliente["Limite"], errors="coerce").fillna(0.0).iloc[0])
+            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values)
+            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values)
             disponivel = max(0.0, limite_atual - divida_atual)
 
             st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
-            valor_compra = st.number_input(
+            value_compra = st.number_input(
                 "Valor da Nova Compra (R$)",
                 min_value=0.01,
                 value=10.0,
@@ -370,13 +369,13 @@ with aba_adicionar:
 
         if confirmar_compra:
 
-            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
+            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + value_compra
             
             salvar_clientes(df_atual)
 
             st.session_state.clientes = carregar_clientes()
 
-            st.success(f"✅ R$ {valor_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
+            st.success(f"✅ R$ {value_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
 
             st.rerun()
 
@@ -397,18 +396,17 @@ with aba_abater:
 
     else:
 
-        with st.form("form_abater_divida", clear_on_submit=True):
+        with st.form("abater_divida", clear_on_submit=True):
 
             lista_devedores = df_devedores["Nome"].tolist()
             
             cliente_pagando = st.selectbox(
                 "Selecione o Cliente:",
-                lista_devedores
+                lista_devedores,
+                key="sb_abater_divida"
             )
 
-            # Correção com .iloc[0] para extrair o valor de forma segura
-            linha_devedor = df_devedores[df_devedores["Nome"] == cliente_pagando]
-            divida_atual = float(pd.to_numeric(linha_devedor["Divida"], errors="coerce").fillna(0.0).iloc[0])
+            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
             st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
             valor_pago = st.number_input(
@@ -452,7 +450,7 @@ with aba_excluir:
 
     else:
 
-        with st.form("form_remover_cliente"):
+        with st.form("remover_cliente"):
 
             lista_todos = df_atual["Nome"].tolist()
 
@@ -491,7 +489,7 @@ with aba_excluir:
                 st.rerun()
 
 # ==========================================
-# RODAPÉ (ORGANIZADO NA ORDEM EXATA)
+# RODAPÉ
 # ==========================================
 
 st.divider()
@@ -519,3 +517,23 @@ total_limite = (
 c1, c2, c3 = st.columns(3)
 
 with c1:
+    st.metric(
+        "Clientes",
+        total_clientes
+    )
+
+with c2:
+    st.metric(
+        "Total em Fiados",
+        f"R$ {total_divida:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+
+with c3:
+    st.metric(
+        "Limite Total",
+        
+f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+st.divider()
+
+st.caption("Portal da Vila • Gestão de Clientes")
