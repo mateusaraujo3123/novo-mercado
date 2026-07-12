@@ -478,6 +478,54 @@ with aba_excluir:
                 st.rerun()
 
 # ==========================================
+# GRÁFICO DOS MAIORES DEVEDORES
+# ==========================================
+
+st.divider()
+
+st.subheader("📊 Ranking dos Maiores Devedores")
+
+df_grafico = st.session_state.clientes.copy()
+
+# Converter dívida para número
+df_grafico["Divida"] = pd.to_numeric(
+    df_grafico["Divida"],
+    errors="coerce"
+).fillna(0)
+
+# Filtrar somente quem deve
+df_devedores = df_grafico[
+    df_grafico["Divida"] > 0
+]
+
+# Ordenar do maior para o menor
+df_devedores = df_devedores.sort_values(
+    by="Divida",
+    ascending=False
+)
+
+if df_devedores.empty:
+
+    st.info("Nenhum cliente possui dívida registrada.")
+
+else:
+
+    # Mostrar tabela do ranking
+    st.dataframe(
+        df_devedores[["Nome", "Divida"]],
+        hide_index=True,
+        use_container_width=True
+    )
+
+    # Gráfico
+    grafico = df_devedores.set_index("Nome")[["Divida"]]
+
+    st.bar_chart(
+        grafico,
+        use_container_width=True
+    )
+    
+# ==========================================
 # RODAPÉ
 # ==========================================
 
