@@ -3,7 +3,7 @@ import pandas as pd
 
 # Configuração da página para layout amplo (wide)
 st.set_page_config(
-    page_title="Mercadinho Pro",
+    page_title="Mercadinho Portal Da Vila",
     page_icon="🛍️",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -55,8 +55,8 @@ if selecao_pagina == "Dashboard Inicial":
     # Cabeçalho Principal do Painel
     st.markdown("""
         <div class="main-header">
-            <span>🛍️ MERCADINHO PRO</span>
-            <span class="status-bd">🟢 BANCO DE DADOS ATIVO</span>
+            <span>🛍️ MERCADINHO Portal Da Vila</span>
+            <span class="status-bd">🟢 online</span>
         </div>
     """, unsafe_allow_html=True)
     
