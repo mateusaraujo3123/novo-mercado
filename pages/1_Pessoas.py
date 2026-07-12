@@ -37,8 +37,8 @@ st.sidebar.radio(
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 
 SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
 ]
 
 
@@ -124,13 +124,10 @@ st.title("👥 Gestão de Clientes")
 
 st.divider()
 
-aba_lista, aba_novo, aba_adicionar, aba_abater, aba_excluir = st.tabs(
+aba_lista, aba_novo = st.tabs(
     [
         "📋 Clientes",
-        "➕ Novo Cliente",
-        "✍️ Adicionar Compra",
-        "💰 Receber Pagamento",
-        "❌ Remover Cliente"
+        "➕ Novo Cliente"
     ]
 )
 # ==========================================
@@ -304,171 +301,6 @@ with aba_novo:
                 st.session_state.clientes = carregar_clientes()
 
                 st.success(f"{nome} cadastrado com sucesso!")
-
-                st.rerun()
-
-# ==========================================
-# ABA - ADICIONAR COMPRA (AUMENTAR DÍVIDA)
-# ==========================================
-
-with aba_adicionar:
-
-    st.subheader("Registrar Nova Compra no Fiado")
-
-    df_atual = carregar_clientes()
-
-    if df_atual.empty:
-
-        st.info("Nenhum cliente cadastrado.")
-
-    else:
-
-        with st.form("adicionar_compra", clear_on_submit=True):
-
-            lista_clientes = df_atual["Nome"].tolist()
-            
-            cliente_comprando = st.selectbox(
-                "Selecione o Cliente que está comprando:",
-                lista_clientes,
-                key="sb_adicionar_compra"
-            )
-
-            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values)
-            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values)
-            disponivel = max(0.0, limite_atual - divida_atual)
-
-            st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-
-            valor_compra = st.number_input(
-                "Valor da Nova Compra (R$)",
-                min_value=0.01,
-                value=10.0,
-                step=5.0
-            )
-
-            confirmar_compra = st.form_submit_button(
-                "Confirmar Nova Compra",
-                type="primary"
-            )
-
-        if confirmar_compra:
-
-            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
-            
-            salvar_clientes(df_atual)
-
-            st.session_state.clientes = carregar_clientes()
-
-            st.success(f"✅ R$ {valor_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
-
-            st.rerun()
-
-# ==========================================
-# ABA - RECEBER PAGAMENTO (ABATER DÍVIDA)
-# ==========================================
-
-with aba_abater:
-
-    st.subheader("Registrar Pagamento de Cliente")
-
-    df_atual = carregar_clientes()
-    df_devedores = df_atual[pd.to_numeric(df_atual["Divida"], errors="coerce").fillna(0) > 0]
-
-    if df_devedores.empty:
-
-        st.info("Nenhum cliente possui dívidas pendentes no momento.")
-
-    else:
-
-        with st.form("abater_divida", clear_on_submit=True):
-
-            lista_devedores = df_devedores["Nome"].tolist()
-            
-            cliente_pagando = st.selectbox(
-                "Selecione o Cliente:",
-                lista_devedores,
-                key="sb_abater_divida"
-            )
-
-            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
-            st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
-
-            valor_pago = st.number_input(
-                "Valor Pago (R$)",
-                min_value=0.01,
-                max_value=divida_atual,
-                value=divida_atual,
-                step=5.0
-            )
-
-            confirmar_pagamento = st.form_submit_button(
-                "Confirmar Recebimento",
-                type="primary"
-            )
-
-        if confirmar_pagamento:
-
-            df_atual.loc[df_atual["Nome"] == cliente_pagando, "Divida"] = divida_atual - valor_pago
-            
-            salvar_clientes(df_atual)
-
-            st.session_state.clientes = carregar_clientes()
-
-            st.success(f"✅ R$ {valor_pago:,.2f} abatidos da conta de {cliente_pagando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
-
-            st.rerun()
-
-# ==========================================
-# ABA - REMOVER CLIENTE
-# ==========================================
-
-with aba_excluir:
-
-    st.subheader("Excluir Cliente do Sistema")
-
-    df_atual = carregar_clientes()
-
-    if df_atual.empty:
-
-        st.info("Nenhum cliente cadastrado para remover.")
-
-    else:
-
-        with st.form("remover_cliente"):
-
-            lista_todos = df_atual["Nome"].tolist()
-
-            cliente_remover = st.selectbox(
-                "Selecione o cliente que deseja apagar permanentemente:",
-                lista_todos
-            )
-
-            st.error("⚠️ Atenção: Esta ação não pode ser desfeita. O cliente será deletado da planilha.")
-
-            caixa_confirmacao = st.checkbox(
-                f"Confirmo que desejo deletar o cadastro de {cliente_remover}"
-            )
-
-            botao_deletar = st.form_submit_button(
-                "Excluir Cadastro Definitivamente",
-                type="primary"
-            )
-
-        if botao_deletar:
-
-            if not caixa_confirmacao:
-
-                st.error("Marque a caixa de confirmação para poder excluir.")
-
-            else:
-
-                df_filtrado = df_atual[df_atual["Nome"] != cliente_remover]
-
-                salvar_clientes(df_filtrado)
-
-                st.session_state.clientes = carregar_clientes()
-
-                st.success(f"{cliente_remover} foi removido do sistema!")
 
                 st.rerun()
 
