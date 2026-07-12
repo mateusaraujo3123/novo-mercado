@@ -14,23 +14,6 @@ st.set_page_config(
 )
 
 # ==========================================
-# MENU LATERAL
-# ==========================================
-
-st.sidebar.markdown("# 🏪 Menu Mercadinho")
-
-st.sidebar.radio(
-    "Navegação",
-    [
-        "Dashboard Inicial",
-        "Gestão de Fiados",
-        "Tabelas de Preço"
-    ],
-    index=1,
-    label_visibility="collapsed"
-)
-
-# ==========================================
 # GOOGLE SHEETS
 # ==========================================
 
