@@ -174,20 +174,3 @@ clientes_estourados = len(df_clientes[df_clientes["Divida"] > df_clientes["Limit
 
 col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
 
-with col_kpi1:
-    st.metric(
-        label="Soma Total de Fiados", 
-        value=f"R$ {soma_fiados:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-    )
-    
-with col_kpi2:
-    st.metric(
-        label="Clientes Acima do Limite", 
-        value=str(clientes_estourados)
-    )
-    
-with col_kpi3:
-    st.metric(
-        label="Caixa Estimado do Dia", 
-        value="R$ 1.250,00" # Mantido fixo conforme imagem de referência
-    )
