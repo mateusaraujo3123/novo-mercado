@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import gspread
+from google.oauth2.service_account import Credentials
 
 # ==========================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -22,66 +24,149 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# COORDENADAS INTERNET DA PLANILHA (SEM CHAVES)
+# GOOGLE SHEETS (CONEXÃO LIMPA SEM CACHE RÍGIDO)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
+SCOPES = [
+    "https://googleapis.com",
+    "https://googleapis.com"
+]
 
-# Link público em formato CSV para puxar os dados sem usar tokens do Google
-URL_CSV = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
+def conectar_planilha():
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
+    cliente = gspread.authorize(creds)
+    return cliente.open_by_key(ID_PLANILHA)
 
-def carregar_produtos():
-    try:
-        # Puxa os dados direto da internet pelo pandas comum, ignorando travas de cache
-        df = pd.read_csv(URL_CSV)
-        if df.empty or "Produto" not in df.columns:
-            return pd.DataFrame(columns=["Produto", "Preco"])
-        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
-        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
-    except:
-        return pd.DataFrame(columns=["Produto", "Preco"])
-
-# Baixa os números do catálogo diretamente da internet a cada F5
-df_produtos = carregar_produtos()
+planilha = conectar_planilha()
+aba_produtos = planilha.worksheet("Produtos")
 
 # ==========================================
-# TÍTULO
+# CARREGAR E SALVAR PRODUTOS REAL CORRETAMENTE
+# ==========================================
+@st.cache_data(ttl=5)
+def carregar_produtos():
+    dados = aba_produtos.get_all_records()
+    if len(dados) == 0:
+        return pd.DataFrame(columns=["Produto", "Preco"])
+    df = pd.DataFrame(dados)
+    colunas = ["Produto", "Preco"]
+    for col in colunas:
+        if col not in df.columns:
+            df[col] = ""
+    return df[colunas]
+
+def salvar_produtos(df):
+    dados = [df.columns.tolist()]
+    dados.extend(df.values.tolist())
+    aba_produtos.clear()
+    aba_produtos.update(dados)
+    st.cache_data.clear()
+
+if "produtos" not in st.session_state:
+    st.session_state.produtos = carregar_produtos()
+
+# ==========================================
+# TÍTULO E ABAS
 # ==========================================
 st.title("📦 Tabela de Preços")
-st.markdown("Gerencie seus itens adicionando ou alterando preços direto pelo seu aplicativo do Google Sheets. O site atualizará automaticamente na tela.")
 st.divider()
+
+aba_lista, aba_novo, aba_excluir = st.tabs(
+    [
+        "📋 Preços Praticados",
+        "➕ Novo Produto",
+        "❌ Remover Produto"
+    ]
+)
 # ==========================================
-# EXIBIÇÃO DA TABELA COM BARRA DE PESQUISA RÁPIDA
+# ABA - LISTA E ALTERAÇÃO DE PREÇOS
 # ==========================================
-if df_produtos.empty:
-    st.info("Nenhum produto cadastrado na aba 'Produtos' da sua planilha.")
-else:
-    # Campo de busca em tempo real para agilizar no balcão do caixa
-    busca = st.text_input("🔍 Buscar Produto por Nome", placeholder="Digite o nome da mercadoria para consultar o preço...").strip().lower()
-    
-    if busca:
-        df_exibir = df_produtos[df_produtos["Produto"].astype(str).str.lower().str.contains(busca)]
+with aba_lista:
+    st.subheader("Catálogo de Produtos")
+    if st.session_state.produtos.empty:
+        st.info("Nenhum produto cadastrado na tabela de preços.")
     else:
-        df_exibir = df_produtos.copy()
-        
-    if df_exibir.empty:
-        st.warning("Nenhum produto encontrado com esse nome.")
-    else:
-        # Mostra o catálogo na tela formatado como moeda com o visual padrão limpo
-        st.dataframe(
-            df_exibir,
-            use_container_width=True,
-            hide_index=True,
+        produtos_editados = st.data_editor(
+            st.session_state.produtos, hide_index=True, use_container_width=True, num_rows="dynamic", key="editor_produtos",
             column_config={
-                "Produto": st.column_config.TextColumn("Descrição da Mercadoria"),
-                "Preco": st.column_config.NumberColumn("Preço de Venda", format="R$ %.2f")
+                "Produto": st.column_config.TextColumn("Descrição da Mercadoria", required=True),
+                "Preco": st.column_config.NumberColumn("Preço de Venda (R$)", min_value=0.0, step=0.10, format="R$ %.2f")
             }
         )
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Salvar Alterações", use_container_width=True, type="primary", key="btn_salvar_prod"):
+                produtos_editados = produtos_editados.fillna("")
+                salvar_produtos(produtos_editados)
+                st.session_state.produtos = carregar_produtos()
+                st.success("Tabela de preços atualizada com sucesso!")
+                st.rerun()
+        with col2:
+            if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
+                st.session_state.produtos = carregar_produtos()
+                st.rerun()
 
 # ==========================================
-# RODAPÉ COM INDICADOR NUMÉRICO REAL
+# ABA - CADASTRO DE NOVO PRODUTO
+# ==========================================
+with aba_novo:
+    st.subheader("Cadastrar Novo Item")
+    with st.form("novo_produto", clear_on_submit=True):
+        nome_prod = st.text_input("Descrição / Nome do Produto")
+        preco_venda = st.number_input("Preço de Venda Inicial (R$)", min_value=0.0, value=5.0, step=1.0)
+        enviar_prod = st.form_submit_button("Cadastrar", type="primary")
+
+    if enviar_prod:
+        nome_prod = nome_prod.strip()
+        if nome_prod == "":
+            st.error("Informe a descrição do produto.")
+        else:
+            df_prod = carregar_produtos()
+            itens_cadastrados = df_prod["Produto"].astype(str).str.strip().str.lower()
+            if nome_prod.lower() in itens_cadastrados.values:
+                st.error("Esta mercadoria já está cadastrada na tabela de preços.")
+            else:
+                nova_linha_prod = pd.DataFrame([{"Produto": nome_prod, "Preco": preco_venda}])
+                df_prod = pd.concat([df_prod, nova_linha_prod], ignore_index=True)
+                salvar_produtos(df_prod)
+                st.session_state.produtos = carregar_produtos()
+                st.success(f"'{nome_prod}' adicionado com sucesso!")
+                st.rerun()
+
+# ==========================================
+# ABA - REMOVER PRODUTO
+# ==========================================
+with aba_excluir:
+    st.subheader("Excluir Item do Catálogo")
+    df_prod_atual = carregar_produtos()
+    if df_prod_atual.empty:
+        st.info("Nenhum produto cadastrado para remover.")
+    else:
+        with st.form("form_remover_produto"):
+            lista_itens = df_prod_atual["Produto"].tolist()
+            item_remover = st.selectbox("Selecione o produto que deseja apagar permanentemente:", lista_itens)
+            st.error("⚠️ Atenção: O item será deletado definitivamente da tabela de preços.")
+            caixa_confirmacaop = st.checkbox(f"Confirmo que desejo deletar o produto: {item_remover}")
+            botao_deletarp = st.form_submit_button("Excluir Definitivamente", type="primary")
+
+        if botao_deletarp:
+            if not caixa_confirmacaop:
+                st.error("Marque a caixa de confirmação para poder excluir.")
+            else:
+                df_filtrado_p = df_prod_atual[df_prod_atual["Produto"] != item_remover]
+                salvar_produtos(df_filtrado_p)
+                st.session_state.produtos = carregar_produtos()
+                st.success(f"💥 '{item_remover}' foi removido do catálogo!")
+                st.rerun()
+
+# ==========================================
+# RODAPÉ
 # ==========================================
 st.divider()
-total_itens = len(df_produtos)
+total_itens = len(st.session_state.produtos)
 st.metric("Variedade de Itens Praticados", f"{total_itens} produtos")
 st.divider()
 st.caption("Portal da Vila • Tabelas de Preço")
