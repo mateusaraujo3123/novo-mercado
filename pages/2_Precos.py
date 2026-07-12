@@ -128,28 +128,33 @@ with aba_lista:
         )
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("💾 Salvar Alterações", use_container_width=True, type="primary", key="btn_salvar_prod"):
+    if st.button(
+        "💾 Salvar Alterações",
+        use_container_width=True,
+        type="primary",
+        key="btn_salvar_prod"
+    ):
 
-    produtos_editados = produtos_editados.fillna("")
+        produtos_editados = produtos_editados.fillna("")
 
-    produtos_editados["Preco"] = (
-        produtos_editados["Preco"]
-        .astype(str)
-        .str.replace(",", ".", regex=False)
-    )
+        produtos_editados["Preco"] = (
+            produtos_editados["Preco"]
+            .astype(str)
+            .str.replace(",", ".", regex=False)
+        )
 
-    produtos_editados["Preco"] = pd.to_numeric(
-        produtos_editados["Preco"],
-        errors="coerce"
-    ).fillna(0)
+        produtos_editados["Preco"] = pd.to_numeric(
+            produtos_editados["Preco"],
+            errors="coerce"
+        ).fillna(0)
 
-    salvar_produtos(produtos_editados)
+        salvar_produtos(produtos_editados)
 
-    st.session_state.produtos = carregar_produtos()
+        st.session_state.produtos = carregar_produtos()
 
-    st.success("Tabela de preços atualizada com sucesso!")
+        st.success("Tabela de preços atualizada com sucesso!")
 
-    st.rerun()
+        st.rerun()
     
         with col2:
             if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
