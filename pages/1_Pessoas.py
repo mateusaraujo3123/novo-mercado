@@ -1,5 +1,4 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 
 # Configuração da página
@@ -19,120 +18,84 @@ st.sidebar.radio(
     label_visibility="collapsed"
 )
 
-# Cria a conexão oficial usando o link configurado nas configurações (Secrets) do seu Streamlit Cloud
-conn = st.connection("gsheets", type=GSheetsConnection)
+# ID público estável da sua planilha fornecida
+ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
+URL_CSV = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=clientes"
 
-# Função para buscar os dados atualizados em tempo real
-def carregar_dados_reais():
+# Carrega os dados reais do Google Sheets de forma limpa via pandas
+@st.cache_data(ttl=5) # Atualiza o cachê a cada 5 segundos se houver mudança
+def buscar_dados_google():
     try:
-        # Puxa os dados direto da aba 'clientes' que você configurou
-        df = conn.read(worksheet="clientes", ttl=0)
-        # Se a planilha estiver vazia, garante a criação das colunas certas
+        df = pd.read_csv(URL_CSV)
         if df.empty or "Nome" not in df.columns:
             return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
-        return df[["Nome", "Limite", "Divida"]]
+        return df[["Nome", "Limite", "Divida"]].dropna(subset=["Nome"])
     except:
         return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
-# Carrega os dados reais antes de renderizar os elementos da tela
-df_clientes = carregar_dados_reais()
+# Inicializa os dados reais na sessão para edição dinâmica
+if "banco_clientes" not in st.session_state:
+    st.session_state.banco_clientes = buscar_dados_google()
 
 # Título da página
 st.title("👥 Gestão de Clientes e Fiados")
 st.markdown("---")
 
-# Subpastas internas organizadas por Abas
-aba_lista, aba_cadastro, aba_recebimento, aba_remover = st.tabs([
-    "📋 Clientes & Saldos", 
-    "➕ Cadastrar Cliente", 
-    "💰 Registrar Pagamento",
-    "❌ Remover Cliente"
+# Subpastas internas organizadas de forma otimizada em 2 abas
+aba_lista, aba_acoes = st.tabs([
+    "📋 Painel de Controle (Editar/Remover)", 
+    "➕ Novo Cadastro Rápido"
 ])
 
-# --- SUBPASTA 1: LISTA E SALDOS ---
+# --- ABA 1: PAINEL DE CONTROLE INTEGRADO ---
 with aba_lista:
-    st.subheader("Relação de Clientes Cadastrados")
-    # Limpa possíveis linhas nulas criadas no Excel para não poluir
-    df_exibir = df_clientes.dropna(subset=["Nome"])
+    st.subheader("Gerenciamento Geral de Fiados")
+    st.markdown("💡 *Dica: Você pode dar baixa em pagamentos, alterar limites ou remover linhas diretamente na tabela abaixo!*")
     
-    if df_exibir.empty:
-        st.info("Nenhum cliente cadastrado na planilha na nuvem ainda.")
+    if st.session_state.banco_clientes.empty:
+        st.info("Nenhum registro ativo puxado da nuvem. Cadastre o primeiro cliente na aba ao lado.")
     else:
-        st.dataframe(df_exibir, use_container_width=True, hide_index=True)
-
-# --- SUBPASTA 2: CADASTRO DE NOVO CLIENTE ---
-with aba_cadastro:
-    st.subheader("Formulário de Cadastro")
-    
-    col_cad1, col_cad2 = st.columns(2)
-    with col_cad1:
-        nome_cliente = st.text_input("Nome Completo do Cliente", placeholder="Ex: João Silva").strip()
-    with col_cad2:
-        limite_credito = st.number_input("Limite Máximo de Fiado (R$)", min_value=0.0, value=200.0, step=50.0)
-    
-    if st.button("Salvar Cadastro", type="primary"):
-        if nome_cliente:
-            if nome_cliente in df_clientes["Nome"].astype(str).values:
-                st.error("⚠️ Este cliente já está cadastrado!")
-            else:
-                # Monta a nova linha do cliente com Dívida inicial zerada
-                novo_registro = pd.DataFrame([{"Nome": nome_cliente, "Limite": limite_credito, "Divida": 0.0}])
-                df_atualizado = pd.concat([df_clientes, novo_registro], ignore_index=True)
-                
-                # ENVIA OS DADOS DE VOLTA PARA A PLANILHA DO GOOGLE DRIVE
-                conn.update(worksheet="clientes", data=df_atualizado)
-                st.success(f"✅ Cliente '{nome_cliente}' gravado com sucesso no Google Sheets!")
-                st.rerun()
-        else:
-            st.error("⚠️ Por favor, digite o nome do cliente antes de salvar.")
-
-# --- SUBPASTA 3: REGISTRAR PAGAMENTO ---
-with aba_recebimento:
-    st.subheader("Dar Baixa em Dívida")
-    df_filtrado = df_clientes.dropna(subset=["Nome"])
-    
-    if df_filtrado.empty:
-        st.info("Nenhum cliente disponível para receber.")
-    else:
-        lista_nomes = df_filtrado["Nome"].tolist()
-        col_pago1, col_pago2 = st.columns(2)
-        with col_pago1:
-            cliente_selecionado = st.selectbox("Selecione o Cliente:", lista_nomes)
-        with col_pago2:
-            valor_pago = st.number_input("Valor Pago (R$)", min_value=0.0, step=10.0)
-            
-        if st.button("Confirmar Recebimento"):
-            if valor_pago > 0:
-                # Localiza o cliente na tabela e subtrai a dívida
-                df_clientes.loc[df_clientes["Nome"] == cliente_selecionado, "Divida"] -= valor_pago
-                
-                # ENVIA A ATUALIZAÇÃO PARA A PLANILHA
-                conn.update(worksheet="clientes", data=df_clientes)
-                st.success(f"✅ Pagamento de R$ {valor_pago:.2f} registrado com sucesso!")
-                st.rerun()
-            else:
-                st.error("⚠️ Digite um valor maior que zero para o pagamento.")
-
-# --- SUBPASTA 4: REMOVER CLIENTE ---
-with aba_remover:
-    st.subheader("❌ Excluir Cliente do Sistema")
-    df_filtrado_rem = df_clientes.dropna(subset=["Nome"])
-    
-    if df_filtrado_rem.empty:
-        st.info("Nenhum cliente na lista para remoção.")
-    else:
-        lista_nomes_remover = df_filtrado_rem["Nome"].tolist()
-        cliente_para_remover = st.selectbox("Escolha o cliente que deseja apagar:", lista_nomes_remover, key="sb_remover")
-        confirmou = st.checkbox(f"Confirmo que desejo apagar permanentemente o cadastro de '{cliente_para_remover}'")
+        # Gera a planilha interativa na tela com edição e exclusão integradas de forma nativa
+        dados_editados = st.data_editor(
+            st.session_state.banco_clientes,
+            use_container_width=True,
+            num_rows="dynamic", # Permite que você clique em linhas e aperte 'Delete' para remover clientes
+            column_config={
+                "Nome": st.column_config.TextColumn("Nome Completo", required=True),
+                "Limite": st.column_config.NumberColumn("Limite Máximo (R$)", min_value=0, format="R$ %d"),
+                "Divida": st.column_config.NumberColumn("Dívida Atual (R$)", min_value=0, format="R$ %.2f"),
+            },
+            key="editor_clientes"
+        )
         
-        if st.button("Excluir Cadastro Definitivamente", type="secondary"):
-            if confirmou:
-                # Remove o cliente filtrando a tabela
-                df_atualizado = df_clientes[df_clientes["Nome"] != cliente_para_remover]
-                
-                # ATUALIZA A PLANILHA NA NUVEM REMOVENDO A LINHA
-                conn.update(worksheet="clientes", data=df_atualizado)
-                st.success(f"💥 O cadastro de '{cliente_para_remover}' foi excluído do banco de dados!")
-                st.rerun()
+        # Botão para validar as alterações em lote
+        if st.button("Salvar Alterações no Banco", type="primary"):
+            st.session_state.banco_clientes = dados_editados
+            st.success("🎉 Alterações gravadas localmente com sucesso no sistema!")
+            st.rerun()
+
+# --- ABA 2: NOVO CADASTRO RÁPIDO ---
+with aba_acoes:
+    st.subheader("Cadastrar Cliente no Sistema")
+    
+    with st.form("form_cadastro_cliente", clear_on_submit=True):
+        col_cad1, col_cad2 = st.columns(2)
+        with col_cad1:
+            novo_nome = st.text_input("Nome Completo do Cliente", placeholder="Ex: João Silva").strip()
+        with col_cad2:
+            novo_limite = st.number_input("Limite de Fiado Inicial (R$)", min_value=0.0, value=200.0, step=50.0)
+            
+        submit = st.form_submit_button("Registrar na Base", type="primary")
+        
+        if submit:
+            if novo_nome:
+                if novo_nome in st.session_state.banco_clientes["Nome"].astype(str).values:
+                    st.error("⚠️ Este cliente já consta na lista cadastrada!")
+                else:
+                    # Injeta a linha com dívida zero na tabela atualizada
+                    nova_linha = pd.DataFrame([{"Nome": novo_nome, "Limite": novo_limite, "Divida": 0.0}])
+                    st.session_state.banco_clientes = pd.concat([st.session_state.banco_clientes, nova_linha], ignore_index=True)
+                    st.success(f"✅ Cliente '{novo_nome}' adicionado! Vá à aba de controle e clique em Salvar.")
+                    st.rerun()
             else:
-                st.error("⚠️ Você precisa marcar a caixa de confirmação antes de excluir.")
+                st.error("⚠️ Insira um nome válido antes de confirmar.")
