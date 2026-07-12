@@ -12,7 +12,7 @@ st.sidebar.markdown("# 🏪 Menu Mercadinho")
 st.sidebar.write("Ir para:")
 st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"], index=0, label_visibility="collapsed")
 
-# Injeção de CSS para recriar os botões na proporção exata da imagem original
+# Injeção de CSS para recriar os botões e remover de vez o sublinhado
 st.markdown("""
     <style>
     /* Cabeçalho principal */
@@ -36,7 +36,7 @@ st.markdown("""
         font-size: 14px;
     }
     
-    /* CONTAINER DOS BOTÕES COM SIZING CORRETO */
+    /* CONTAINER DOS BOTÕES WITH SIZING CORRETO */
     .button-container {
         display: flex;
         gap: 15px;
@@ -44,14 +44,14 @@ st.markdown("""
         width: 100%;
     }
     
-    /* ESTILO IDENTICO DOS BOTOES ROXOS ORIGINAIS */
+    /* ESTILO IDENTICO DOS BOTOES ROXOS ORIGINAIS (SEM SUBLINHADO) */
     .purple-button {
         flex: 1;
         background-color: #4A148C !important;
         color: white !important;
         padding: 20px 0px;
         text-align: center;
-        text-decoration: none;
+        text-decoration: none !important; /* Remove a linha de baixo padrão */
         font-weight: bold;
         font-size: 15px;
         border-radius: 6px;
@@ -60,9 +60,14 @@ st.markdown("""
         display: block;
     }
     
+    /* Força a remoção do sublinhado em todos os estados do botão */
+    .purple-button:link, .purple-button:visited, .purple-button:hover, .purple-button:active {
+        text-decoration: none !important;
+        color: white !important;
+    }
+    
     .purple-button:hover {
         background-color: #6A1B9A !important;
-        color: white !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -75,7 +80,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Bloco de Botões com o tamanho, espaçamento e proporção originais restaurados
+# Bloco de Botões corrigido e sem linhas sob o texto
 st.markdown("""
     <div class="button-container">
         <a href="/Pessoas" target="_self" class="purple-button">👥 PESSOAS</a>
