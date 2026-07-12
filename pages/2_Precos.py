@@ -181,8 +181,3 @@ total_itens = len(st.session_state.produtos)
 st.metric("Variedade de Itens Praticados", f"{total_itens} produtos")
 st.divider()
 st.caption("Portal da Vila • Tabelas de Preço")
-
-quero fazer com que ele salve em uma planilha google por TOML
-
-o codigo esta no github e o site no stream.app
-no stream.app já existe um toml dessa mesma planilha, pois tem outra pagina do site que utiliza ela também, na foto tem a estrutura da planilha
