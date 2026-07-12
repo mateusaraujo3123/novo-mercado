@@ -69,10 +69,11 @@ def carregar_produtos():
     if "Preco" not in df.columns:
         df["Preco"] = 0
 
+    # Converte o lixo da planilha para número e depois formata como texto usando vírgula
     df["Preco"] = pd.to_numeric(
-        df["Preco"],
+        df["Preco"].astype(str).str.replace(",", ".", regex=False),
         errors="coerce"
-    ).fillna(0)
+    ).fillna(0.0).map(lambda x: f"{x:.2f}".replace(".", ","))
 
     return df[["Produto", "Preco"]]
 
