@@ -115,7 +115,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
     
 st.markdown("<br>", unsafe_allow_html=True)
-st.markdown("## Fluxo de Fiados & Devedores")
 
 # Seção Central Automatizada (2 colunas)
 col_centro1, col_centro2 = st.columns(2)
