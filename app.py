@@ -119,24 +119,3 @@ st.markdown("## Fluxo de Fiados & Devedores")
 
 # Seção Central Automatizada (2 colunas)
 col_centro1, col_centro2 = st.columns(2)
-
-with col_centro1:
-    st.subheader("Top Maiores Devedores (R$)")
-    
-    # Filtra apenas os clientes que estão devendo e ordena do maior para o menor
-    df_devedores = df_clientes[df_clientes["Divida"] > 0].sort_values(by="Divida", ascending=False)
-    
-    if df_devedores.empty:
-        st.info("Nenhuma dívida ativa registrada na planilha.")
-    else:
-        # Formata os valores exibidos na tabela central
-        df_exibir = df_devedores[["Nome", "Divida"]].copy()
-        df_exibir["Divida"] = df_exibir["Divida"].map("R$ %.2f".__mod__)
-        st.dataframe(df_exibir, use_container_width=True, hide_index=True)
-        
-with col_centro2:
-    st.subheader("⚠️ Alertas do Estoque")
-    # Mantido informativo até criarmos a aba de produtos
-    st.info("Nenhum produto cadastrado na planilha.")
-    
-st.markdown("---")
