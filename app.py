@@ -109,7 +109,7 @@ st.markdown("""
 st.markdown("""
     <div class="button-container">
         <a href="/Fiados" target="_self" class="purple-button">👥 FIADOS</a>
-        <a href="/Preços" target="_self" class="purple-button">📦 PREÇOS</a>
+        <a href="/Precos" target="_self" class="purple-button">📦 PREÇOS</a>
         <a href="#" target="_self" class="purple-button">📋 CONTAS A RECEBER</a>
     </div>
 """, unsafe_allow_html=True)
