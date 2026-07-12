@@ -147,35 +147,25 @@ with col_centro2:
 st.markdown("---")
 
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO DIRETA PARA O RODAPÉ)
+# LEITURA DIRETA E LEVE PARA O RODAPÉ
 # ==========================================
-import gspread
-from google.oauth2.service_account import Credentials
-
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
-]
+URL_CSV = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Clientes"
 
-@st.cache_resource
-def conectar_planilha_dash():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES
-    )
-    cliente = gspread.authorize(creds)
-    return cliente.open_by_key(ID_PLANILHA)
+def buscar_dados_frescos_dash():
+    try:
+        # Puxa os dados direto da internet pelo pandas comum, ignorando travas de cache
+        df = pd.read_csv(URL_CSV)
+        if df.empty or "Nome" not in df.columns:
+            return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+        return df[["Nome", "Limite", "Divida"]].dropna(subset=["Nome"])
+    except:
+        return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
-try:
-    planilha_dash = conectar_planilha_dash()
-    aba_clientes_dash = planilha_dash.worksheet("Clientes")
-    dados_dash = aba_clientes_dash.get_all_records()
-    df_dash = pd.DataFrame(dados_dash) if dados_dash else pd.DataFrame(columns=["Nome", "Limite", "Divida"])
-except:
-    df_dash = pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+df_dash = buscar_dados_frescos_dash()
+
 # ==========================================
-# CÁLCULO E EXIBIÇÃO DAS MÉTRICAS DO RODAPÉ
+# CÁLCULO E RENDERIZAÇÃO DAS MÉTRICAS DO RODAPÉ
 # ==========================================
 st.markdown("---")
 
@@ -183,13 +173,13 @@ total_clientes = len(df_dash)
 
 total_divida = (
     pd.to_numeric(df_dash["Divida"], errors="coerce")
-    .fillna(0)
+    .fillna(0.0)
     .sum()
 )
 
 total_limite = (
     pd.to_numeric(df_dash["Limite"], errors="coerce")
-    .fillna(0)
+    .fillna(0.0)
     .sum()
 )
 
@@ -216,4 +206,3 @@ with c3:
 st.divider()
 
 st.caption("Portal da Vila • Dashboard Inicial")
-
