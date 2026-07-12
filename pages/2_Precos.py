@@ -54,7 +54,7 @@ aba_produtos = conectar_planilha()
 @st.cache_data(ttl=5)
 def carregar_produtos():
 
-    dados = aba_produtos.get_all_records(value_render_option="UNFORMATTED_VALUE")
+    dados = aba_produtos.get_all_records(value_render_option="FORMATTED_VALUE"
     
     if not dados:
         return pd.DataFrame(
