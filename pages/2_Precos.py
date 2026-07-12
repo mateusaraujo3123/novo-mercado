@@ -114,50 +114,72 @@ aba_lista, aba_novo, aba_excluir = st.tabs([
 # ==========================================
 with aba_lista:
     st.subheader("Catálogo de Produtos")
+
     if st.session_state.produtos.empty:
         st.info("Nenhum produto cadastrado na tabela de preços.")
+
     else:
+
         produtos_editados = st.data_editor(
-            st.session_state.produtos, hide_index=True, use_container_width=True, num_rows="dynamic", key="editor_produtos",
+            st.session_state.produtos,
+            hide_index=True,
+            use_container_width=True,
+            num_rows="dynamic",
+            key="editor_produtos",
             column_config={
-                "Produto": st.column_config.TextColumn("Descrição da Mercadoria", required=True),
+                "Produto": st.column_config.TextColumn(
+                    "Descrição da Mercadoria",
+                    required=True
+                ),
                 "Preco": st.column_config.TextColumn(
-    "Preço de Venda (R$)"
-)
+                    "Preço de Venda (R$)"
+                )
             }
         )
-        
+
         col1, col2 = st.columns(2)
 
-with col1:
-    if st.button(
-        "💾 Salvar Alterações",
-        use_container_width=True,
-        type="primary",
-        key="btn_salvar_prod"
-    ):
-        produtos_editados = produtos_editados.fillna("")
+        with col1:
 
-        produtos_editados["Preco"] = (
-            produtos_editados["Preco"]
-            .astype(str)
-            .str.replace(",", ".", regex=False)
-        )
+            if st.button(
+                "💾 Salvar Alterações",
+                use_container_width=True,
+                type="primary",
+                key="btn_salvar_prod"
+            ):
 
-        produtos_editados["Preco"] = pd.to_numeric(
-            produtos_editados["Preco"],
-            errors="coerce"
-        ).fillna(0)
+                produtos_editados = produtos_editados.fillna("")
 
-        salvar_produtos(produtos_editados)
-        st.session_state.produtos = carregar_produtos()
-        st.success("Tabela de preços atualizada com sucesso!")
-        st.rerun()
+                produtos_editados["Preco"] = (
+                    produtos_editados["Preco"]
+                    .astype(str)
+                    .str.replace(",", ".", regex=False)
+                )
 
-with col2:
-    if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
-        st.session_state.produtos = carregar_produtos()
-        st.rerun(
+                produtos_editados["Preco"] = pd.to_numeric(
+                    produtos_editados["Preco"],
+                    errors="coerce"
+                ).fillna(0)
+
+                salvar_produtos(produtos_editados)
+
+                st.session_state.produtos = carregar_produtos()
+
+                st.success("Tabela de preços atualizada com sucesso!")
+
+                st.rerun()
+
+        with col2:
+
+            if st.button(
+                "🔄 Atualizar Lista",
+                use_container_width=True,
+                key="btn_att_prod"
+            ):
+
+                st.session_state.produtos = carregar_produtos()
+
+                st.rerun()
 
 # ==========================================
 # ABA - CADASTRO DE NOVO PRODUTO
