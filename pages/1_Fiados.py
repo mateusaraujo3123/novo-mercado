@@ -48,13 +48,14 @@ aba_clientes = planilha.worksheet("Clientes")
 # CARREGAR CLIENTES (AUMENTADO O TTL PARA 60 SEGUNDOS)
 # ==========================================
 
-@st.cache_data(ttl=60) # Altere de 5 para 60 para economizar acessos ao Google
+@st.cache_data(ttl=60) # Mantido os 60 segundos para economizar acessos ao Google
 def carregar_clientes():
 
-    dados = aba_clientes.get_all_records()
+    # MUDANÇA CHAVE: Pega a matriz de texto puro bruto da planilha
+    linhas_brutas = aba_clientes.get_all_values()
 
-    if len(dados) == 0:
-
+    # Se a planilha estiver vazia ou só tiver o cabeçalho (linha 1)
+    if len(linhas_brutas) <= 1:
         return pd.DataFrame(
             columns=[
                 "Nome",
@@ -63,15 +64,35 @@ def carregar_clientes():
             ]
         )
 
-    df = pd.DataFrame(dados)
+    # O primeiro item é o cabeçalho, os demais são as linhas de clientes
+    cabecalho = linhas_brutas[0]
+    dados_corpo = linhas_brutas[1:]
+
+    # Monta a tabela do Pandas com o texto bruto direto do Google Drive
+    df = pd.DataFrame(dados_corpo, columns=cabecalho)
 
     colunas = ["Nome", "Limite", "Divida"]
 
     for coluna in colunas:
-
         if coluna not in df.columns:
-
             df[coluna] = ""
+
+    # Função interna para limpar a vírgula brasileira antes de converter para número
+    def converter_moeda_br(val):
+        try:
+            texto = str(val).strip().replace("R$", "").strip()
+            if not texto or texto == "0" or texto == "0.0" or texto == "0,00":
+                return 0.0
+            # Se vier com vírgula da planilha (ex: 200,50), troca por ponto para o Python entender
+            if "," in texto:
+                return float(texto.replace(",", "."))
+            return float(texto)
+        except:
+            return 0.0
+
+    # Aplica a conversão segura nas colunas financeiras
+    df["Limite"] = df["Limite"].apply(converter_moeda_br)
+    df["Divida"] = df["Divida"].apply(converter_moeda_br)
 
     return df[colunas]
 
