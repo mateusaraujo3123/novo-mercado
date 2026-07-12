@@ -53,39 +53,46 @@ aba_produtos = conectar_planilha()
 
 @st.cache_data(ttl=5)
 def carregar_produtos():
-
-    # TRAVA DEFINITIVA: Puxa o formato idêntico ao que você vê na tela do Sheets
-    dados = aba_produtos.get_all_records(value_render_option="FORMATTED_VALUE")
-
-    if not dados:
-        return pd.DataFrame(
-            columns=["Produto", "Preco"]
-        )
-
-    df = pd.DataFrame(dados)
-
+    # Pega todas as linhas e colunas como texto puro bruto
+    linhas_brutas = aba_produtos.get_all_values()
+    
+    # Se a planilha estiver vazia ou só tiver o cabeçalho
+    if len(linhas_brutas) <= 1:
+        return pd.DataFrame(columns=["Produto", "Preco"])
+        
+    # O primeiro item é o cabeçalho, os demais são os dados
+    cabecalho = linhas_brutas[0]
+    dados_corpo = linhas_brutas[1:]
+    
+    # Monta a tabela diretamente
+    df = pd.DataFrame(dados_corpo, columns=cabecalho)
+    
+    # Garante que as colunas obrigatórias existam com nomes corretos
     if "Produto" not in df.columns:
         df["Produto"] = ""
-
     if "Preco" not in df.columns:
         df["Preco"] = "0,00"
-
-    # Garante que o texto vindo da planilha mantenha as vírgulas e as duas casas decimais
-    def formatar_preco_br(val):
+        
+    # Limpa e padroniza a formatação para o padrão brasileiro de duas casas
+    def limpar_e_formatar(val):
         try:
-            val_str = str(val).strip().replace("R$", "").strip()
-            if not val_str or val_str == "0":
+            texto = str(val).strip().replace("R$", "").strip()
+            if not texto or texto == "0":
                 return "0,00"
-            if "," in val_str:
-                num = float(val_str.replace(",", "."))
+            # Se já veio com a vírgula certa da planilha (ex: 5,20), mantém o valor intacto
+            if "," in texto:
+                # Trata casos raros onde o gspread lê pontos residuais
+                partes = texto.split(",")
+                if len(partes) == 2 and len(partes[1]) == 2:
+                    return texto
+                num = float(texto.replace(",", "."))
             else:
-                num = float(val_str)
+                num = float(texto)
             return f"{num:.2f}".replace(".", ",")
         except:
             return "0,00"
-
-    df["Preco"] = df["Preco"].apply(formatar_preco_br)
-
+            
+    df["Preco"] = df["Preco"].apply(limpar_e_formatar)
     return df[["Produto", "Preco"]]
 
 def salvar_produtos(df):
