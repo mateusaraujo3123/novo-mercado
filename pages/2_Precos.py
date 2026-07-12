@@ -89,20 +89,27 @@ def carregar_produtos():
 
 def salvar_produtos(df):
 
+    # Faz uma cópia para o Sheets salvar com a vírgula brasileira
+    df_salvar = df.copy()
+    df_salvar["Preco"] = (
+        pd.to_numeric(df_salvar["Preco"], errors="coerce")
+        .fillna(0.0)
+        .map(lambda x: f"{x:.2f}".replace(".", ","))
+    )
+
     dados = [
         ["Produto", "Preco"]
     ]
 
-    dados.extend(df.values.tolist())
+    dados.extend(df_salvar.values.tolist())
 
     aba_produtos.clear()
 
-    aba_produtos.update(
-        "A1",
-        dados
-    )
+    # Salva os dados na planilha (com o ajuste de ordem correto do gspread)
+    aba_produtos.update(dados, "A1")
 
     st.cache_data.clear()
+
 
 
 if "produtos" not in st.session_state:
