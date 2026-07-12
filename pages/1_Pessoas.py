@@ -124,10 +124,12 @@ st.title("👥 Gestão de Clientes")
 
 st.divider()
 
-aba_lista, aba_novo, aba_abater, aba_excluir = st.tabs(
+# Inclusão da nova aba "Adicionar Compra" no menu de abas
+aba_lista, aba_novo, aba_adicionar, aba_abater, aba_excluir = st.tabs(
     [
         "📋 Clientes",
         "➕ Novo Cliente",
+        "✍️ Adicionar Compra",
         "💰 Receber Pagamento",
         "❌ Remover Cliente"
     ]
@@ -307,6 +309,63 @@ with aba_novo:
                 st.rerun()
 
 # ==========================================
+# ABA - ADICIONAR COMPRA (AUMENTAR DÍVIDA)
+# ==========================================
+
+with aba_adicionar:
+
+    st.subheader("Registrar Nova Compra no Fiado")
+
+    df_atual = carregar_clientes()
+
+    if df_atual.empty:
+
+        st.info("Nenhum cliente cadastrado.")
+
+    else:
+
+        with st.form("adicionar_compra", clear_on_submit=True):
+
+            lista_clientes = df_atual["Nome"].tolist()
+            
+            cliente_comprando = st.selectbox(
+                "Selecione o Cliente que está comprando:",
+                lista_clientes,
+                key="sb_adicionar_compra"
+            )
+
+            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values[0])
+            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values[0])
+            disponivel = max(0.0, limite_atual - divida_atual)
+
+            st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            valor_compra = st.number_input(
+                "Valor da Nova Compra (R$)",
+                min_value=0.01,
+                value=10.0,
+                step=5.0
+            )
+
+            confirmar_compra = st.form_submit_button(
+                "Confirmar Nova Compra",
+                type="primary"
+            )
+
+        if confirmar_compra:
+
+            # Soma o novo valor na dívida existente do cliente
+            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
+            
+            salvar_clientes(df_atual)
+
+            st.session_state.clientes = carregar_clientes()
+
+            st.success(f"✅ R$ {valor_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            st.rerun()
+
+# ==========================================
 # ABA - RECEBER PAGAMENTO (ABATER DÍVIDA)
 # ==========================================
 
@@ -329,10 +388,11 @@ with aba_abater:
             
             cliente_pagando = st.selectbox(
                 "Selecione o Cliente:",
-                lista_devedores
+                lista_devedores,
+                key="sb_abater_divida"
             )
 
-            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
+            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values[0])
             st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
             valor_pago = st.number_input(
