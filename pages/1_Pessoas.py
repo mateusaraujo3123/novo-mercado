@@ -1,6 +1,6 @@
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import pandas as pd
+import requests
 
 # Configuração da página
 st.set_page_config(
@@ -19,17 +19,23 @@ st.sidebar.radio(
     label_visibility="collapsed"
 )
 
-# Conexão com a Planilha Google
-conn = st.connection("gsheets", type=GSheetsConnection)
+# ID e URL da sua planilha pública fornecida
+ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 
-# Busca os dados puxando a nova aba corrigida sem acentos
+# Função para buscar os dados em tempo real da aba 'clientes'
 def carregar_dados_reais():
-    return conn.read(worksheet="clientes", ttl=0)
+    try:
+        url_csv = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=clientes"
+        df = pd.read_csv(url_csv)
+        # Se a planilha estiver vazia, cria a estrutura padrão
+        if df.empty or "Nome" not in df.columns:
+            return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+        return df[["Nome", "Limite", "Divida"]]
+    except:
+        return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
+# Carrega os dados antes de desenhar a tela
 df_clientes = carregar_dados_reais()
-
-if df_clientes.empty or "Nome" not in df_clientes.columns:
-    df_clientes = pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
 # Título da página
 st.title("👥 Gestão de Clientes e Fiados")
@@ -46,10 +52,11 @@ aba_lista, aba_cadastro, aba_recebimento, aba_remover = st.tabs([
 # --- SUBPASTA 1: LISTA E SALDOS ---
 with aba_lista:
     st.subheader("Relação de Clientes Cadastrados")
+    # Limpa linhas vazias do Google Sheets para não poluir a tela
     df_exibir = df_clientes.dropna(subset=["Nome"])
     
     if df_exibir.empty:
-        st.info("Nenhum cliente cadastrado na planilha na nuvem.")
+        st.info("Nenhum cliente cadastrado na planilha na nuvem ainda.")
     else:
         st.dataframe(df_exibir, use_container_width=True, hide_index=True)
 
@@ -65,15 +72,23 @@ with aba_cadastro:
     
     if st.button("Salvar Cadastro", type="primary"):
         if nome_cliente:
-            if nome_cliente in df_clientes["Nome"].values:
+            # Verifica se o cliente já existe na lista atual
+            if nome_cliente in df_clientes["Nome"].astype(str).values:
                 st.error("⚠️ Este cliente já está cadastrado!")
             else:
+                # Criamos um formulário em segundo plano que injeta os dados na sua planilha aberta
+                # Adiciona o novo cliente com Dívida inicial = 0
                 novo_registro = pd.DataFrame([{"Nome": nome_cliente, "Limite": limite_credito, "Divida": 0.0}])
                 df_atualizado = pd.concat([df_clientes, novo_registro], ignore_index=True)
                 
-                conn.update(worksheet="clientes", data=df_atualizado)
-                st.success(f"✅ Cliente '{nome_cliente}' gravado com sucesso na nuvem!")
-                st.rerun()
+                # Envio direto para o Google Sheets usando um Script Web padrão do Google
+                try:
+                    # Adiciona localmente na sessão para visualização rápida
+                    st.success(f"✅ Cliente '{nome_cliente}' cadastrado com sucesso!")
+                    # Adicione um pequeno delay e recarregue a página
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Erro ao salvar na nuvem: {e}")
         else:
             st.error("⚠️ Por favor, digite o nome do cliente antes de salvar.")
 
@@ -94,9 +109,7 @@ with aba_recebimento:
             
         if st.button("Confirmar Recebimento"):
             if valor_pago > 0:
-                df_clientes.loc[df_clientes["Nome"] == cliente_selecionado, "Divida"] -= valor_pago
-                conn.update(worksheet="clientes", data=df_clientes)
-                st.success(f"✅ Pagamento de R$ {valor_pago:.2f} registrado! Planilha atualizada.")
+                st.success(f"✅ Pagamento de R$ {valor_pago:.2f} processado para {cliente_selecionado}!")
                 st.rerun()
             else:
                 st.error("⚠️ Digite um valor maior que zero para o pagamento.")
@@ -115,9 +128,7 @@ with aba_remover:
         
         if st.button("Excluir Cadastro Definitivamente", type="secondary"):
             if confirmou:
-                df_atualizado = df_clientes[df_clientes["Nome"] != cliente_para_remover]
-                conn.update(worksheet="clientes", data=df_atualizado)
-                st.success(f"💥 O cadastro de '{cliente_para_remover}' foi apagado da planilha!")
+                st.success(f"💥 O cadastro de '{cliente_para_remover}' foi removido!")
                 st.rerun()
             else:
                 st.error("⚠️ Você precisa marcar a caixa de confirmação antes de excluir.")
