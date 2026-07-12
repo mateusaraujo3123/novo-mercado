@@ -66,7 +66,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO REAL)
+# GOOGLE SHEETS (CONEXÃO DIRETA SEM TRAVA DE CACHE)
 # ==========================================
 
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
@@ -84,18 +84,32 @@ def conectar_planilha():
     cliente = gspread.authorize(creds)
     return cliente.open_by_key(ID_PLANILHA)
 
-try:
-    planilha = conectar_planilha()
-    aba_clientes = planilha.worksheet("Clientes")
-    dados = aba_clientes.get_all_records()
-    df_clientes = pd.DataFrame(dados) if dados else pd.DataFrame(columns=["Nome", "Limite", "Divida"])
-except:
-    df_clientes = pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+# Criamos uma função sem o @st.cache_data para forçar o app.py a ler a planilha real toda vez
+def buscar_dados_frescos():
+    try:
+        planilha = conectar_planilha()
+        aba_clientes = planilha.worksheet("Clientes")
+        dados = aba_clientes.get_all_records()
+        
+        if not dados:
+            return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+            
+        df = pd.DataFrame(dados)
+        
+        # Garante a existência das colunas para evitar erros de cálculo
+        for col in ["Nome", "Limite", "Divida"]:
+            if col not in df.columns:
+                df[col] = 0.0
+                
+        # Força os números a virarem formato matemático legível pelo Python
+        df["Divida"] = pd.to_numeric(df["Divida"], errors="coerce").fillna(0.0)
+        df["Limite"] = pd.to_numeric(df["Limite"], errors="coerce").fillna(0.0)
+        return df
+    except:
+        return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
-# Tratamento e conversão correta dos dados financeiros vindos da planilha
-df_clientes["Divida"] = pd.to_numeric(df_clientes["Divida"], errors="coerce").fillna(0.0)
-df_clientes["Limite"] = pd.to_numeric(df_clientes["Limite"], errors="coerce").fillna(0.0)
-
+# Carrega os dados mais recentes diretamente do Google Drive
+df_clientes = buscar_dados_frescos()
 # ==========================================
 # CONTEÚDO VISUAL DO DASHBOARD
 # ==========================================
