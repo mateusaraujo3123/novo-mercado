@@ -24,7 +24,7 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO CONFIÁVEL)
+# GOOGLE SHEETS (REMOVIDO O CACHE DE RECURSO)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 SCOPES = [
@@ -32,7 +32,7 @@ SCOPES = [
     "https://googleapis.com"
 ]
 
-@st.cache_resource
+# Sem o @st.cache_resource para evitar que o token expire e trave
 def conectar_planilha():
     creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
@@ -112,7 +112,7 @@ with aba_lista:
                 produtos_editados = produtos_editados.fillna("")
                 salvar_produtos(produtos_editados)
                 st.session_state.produtos = carregar_produtos()
-                st.success("Tabela de preços atualizada com sucesso!")
+                st.success("Tabela de preços actualizada com sucesso!")
                 st.rerun()
         with col2:
             if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
