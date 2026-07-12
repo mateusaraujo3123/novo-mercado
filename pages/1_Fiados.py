@@ -126,15 +126,36 @@ st.session_state.clientes = carregar_clientes()
 
 def salvar_clientes(df):
 
-    dados = [df.columns.tolist()]
+    # Faz uma cópia para tratar os valores antes de enviar ao Google Drive
+    df_salvar = df.copy()
+    
+    # Garante que o Limite salve com vírgula e formato de texto travado (')
+    df_salvar["Limite"] = (
+        pd.to_numeric(df_salvar["Limite"].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        .fillna(0.0)
+        .map(lambda x: f"'{x:.2f}".replace(".", ","))
+    )
+    
+    # Garante que a Dívida também salve com vírgula e formato travado (')
+    df_salvar["Divida"] = (
+        pd.to_numeric(df_salvar["Divida"].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        .fillna(0.0)
+        .map(lambda x: f"'{x:.2f}".replace(".", ","))
+    )
 
-    dados.extend(df.values.tolist())
+    dados = [
+        ["Nome", "Limite", "Divida"]
+    ]
+
+    dados.extend(df_salvar.values.tolist())
 
     aba_clientes.clear()
 
-    aba_clientes.update(dados)
+    # Salva na planilha mantendo a ordem correta do gspread (dados primeiro)
+    aba_clientes.update(dados, "A1")
 
     carregar_clientes.clear()
+
 
 # ==========================================
 # SESSION STATE
