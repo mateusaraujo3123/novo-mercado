@@ -80,21 +80,27 @@ def carregar_produtos():
 
 def salvar_produtos(df):
 
+    df_salvar = df.copy()
+    
+    # Garante que qualquer digitação com ponto seja corrigida para vírgula antes de subir para o Sheets
+    df_salvar["Preco"] = (
+        df_salvar["Preco"]
+        .astype(str)
+        .str.replace(".", ",", regex=False)
+    )
+
     dados = [
         ["Produto", "Preco"]
     ]
 
-    dados.extend(df.values.tolist())
+    dados.extend(df_salvar.values.tolist())
 
     aba_produtos.clear()
 
-    aba_produtos.update(
-        "A1",
-        dados
-    )
+    # Aplica o ajuste de ordem correto do gspread (dados primeiro, célula depois)
+    aba_produtos.update(dados, "A1")
 
     st.cache_data.clear()
-
 
 if "produtos" not in st.session_state:
     st.session_state.produtos = carregar_produtos()
@@ -158,7 +164,8 @@ with aba_novo:
             if nome_prod.lower() in itens_cadastrados.values:
                 st.error("Esta mercadoria já está cadastrada na tabela de preços.")
             else:
-                nova_linha_prod = pd.DataFrame([{"Produto": nome_prod, "Preco": preco_venda}])
+                preco_texto = f"{preco_venda:.2f}".replace(".", ",")
+                nova_linha_prod = pd.DataFrame([{"Produto": nome_prod, "Preco": preco_texto}])
                 df_prod = pd.concat([df_prod, nova_linha_prod], ignore_index=True)
                 salvar_produtos(df_prod)
                 st.session_state.produtos = carregar_produtos()
