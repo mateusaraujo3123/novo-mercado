@@ -54,8 +54,9 @@ aba_produtos = conectar_planilha()
 @st.cache_data(ttl=5)
 def carregar_produtos():
 
-    dados = aba_produtos.get_all_records(value_render_option="FORMATTED_VALUE"
-    
+    # TRAVA DEFINITIVA: Puxa o formato idêntico ao que você vê na tela do Sheets
+    dados = aba_produtos.get_all_records(value_render_option="FORMATTED_VALUE")
+
     if not dados:
         return pd.DataFrame(
             columns=["Produto", "Preco"]
@@ -67,22 +68,18 @@ def carregar_produtos():
         df["Produto"] = ""
 
     if "Preco" not in df.columns:
-        df["Preco"] = 0
+        df["Preco"] = "0,00"
 
-    # -----------------------------------------------------------------
-    # AJUSTE DA CONVERSÃO PARA EVITAR MULTIPLICAÇÃO POR 100
-    # -----------------------------------------------------------------
-    # Converte para string e limpa qualquer espaço em branco
-    df["Preco"] = df["Preco"].astype(str).str.strip()
-    
-    # Se o valor vier com ponto (ex: 2.5), troca por vírgula direto antes de formatar
+    # Garante que o texto vindo da planilha mantenha as vírgulas e as duas casas decimais
     def formatar_preco_br(val):
         try:
-            # Se já tiver vírgula, garante que tenha duas casas decimais corretas
-            if "," in val:
-                num = float(val.replace(",", "."))
+            val_str = str(val).strip().replace("R$", "").strip()
+            if not val_str or val_str == "0":
+                return "0,00"
+            if "," in val_str:
+                num = float(val_str.replace(",", "."))
             else:
-                num = float(val)
+                num = float(val_str)
             return f"{num:.2f}".replace(".", ",")
         except:
             return "0,00"
