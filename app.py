@@ -113,8 +113,8 @@ st.markdown("""
 # Bloco de Botões Roxos com o Alinhamento e Tamanho Perfeitos
 st.markdown("""
     <div class="button-container">
-        <a href="/Gestao_de_Fiados" target="_self" class="purple-button">👥 PESSOAS</a>
-        <a href="/Tabelas_de_Preco" target="_self" class="purple-button">📦 PRODUTOS</a>
+        <a href="/Pessoas" target="_self" class="purple-button">👥 PESSOAS</a>
+        <a href="/Produtos" target="_self" class="purple-button">📦 PRODUTOS</a>
         <a href="#" target="_self" class="purple-button">📋 CONTAS A RECEBER</a>
     </div>
 """, unsafe_allow_html=True)
