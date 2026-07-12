@@ -147,30 +147,73 @@ with col_centro2:
 st.markdown("---")
 
 # ==========================================
-# CÁLCULO E EXIBIÇÃO DE MÉTRICAS REAIS
+# GOOGLE SHEETS (CONEXÃO DIRETA PARA O RODAPÉ)
 # ==========================================
+import gspread
+from google.oauth2.service_account import Credentials
 
-soma_fiados = df_clientes["Divida"].sum()
+ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
+SCOPES = [
+    "https://googleapis.com",
+    "https://googleapis.com"
+]
 
-# Identifica clientes que estouraram o limite configurado
-clientes_estourados = len(df_clientes[df_clientes["Divida"] > df_clientes["Limite"]])
-
-col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
-
-with col_kpi1:
-    st.metric(
-        label="Soma Total de Fiados", 
-        value=f"R$ {soma_fiados:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+@st.cache_resource
+def conectar_planilha_dash():
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
     )
-    
-with col_kpi2:
+    cliente = gspread.authorize(creds)
+    return cliente.open_by_key(ID_PLANILHA)
+
+try:
+    planilha_dash = conectar_planilha_dash()
+    aba_clientes_dash = planilha_dash.worksheet("Clientes")
+    dados_dash = aba_clientes_dash.get_all_records()
+    df_dash = pd.DataFrame(dados_dash) if dados_dash else pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+except:
+    df_dash = pd.DataFrame(columns=["Nome", "Limite", "Divida"])
+# ==========================================
+# CÁLCULO E EXIBIÇÃO DAS MÉTRICAS DO RODAPÉ
+# ==========================================
+st.markdown("---")
+
+total_clientes = len(df_dash)
+
+total_divida = (
+    pd.to_numeric(df_dash["Divida"], errors="coerce")
+    .fillna(0)
+    .sum()
+)
+
+total_limite = (
+    pd.to_numeric(df_dash["Limite"], errors="coerce")
+    .fillna(0)
+    .sum()
+)
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
     st.metric(
-        label="Clientes Acima do Limite", 
-        value=str(clientes_estourados)
+        "Clientes",
+        total_clientes
     )
-    
-with col_kpi3:
+
+with c2:
     st.metric(
-        label="Caixa Estimado do Dia", 
-        value="R$ 1.250,00" # Mantido fixo conforme imagem de referência
+        "Total em Fiados",
+        f"R$ {total_divida:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
     )
+
+with c3:
+    st.metric(
+        "Limite Total",
+        f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+
+st.divider()
+
+st.caption("Portal da Vila • Dashboard Inicial")
+
