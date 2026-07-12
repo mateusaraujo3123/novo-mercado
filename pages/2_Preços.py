@@ -45,6 +45,10 @@ def salvar_produtos(df):
     st.session_state.produtos = df
     st.toast("💡 Alterações salvas na sessão atual do seu navegador!")
 
+# Cole exatamente isto acima do @st.cache_data
+ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
+URL_LEITURA = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
+
 @st.cache_data(ttl=5) # Mudando o TTL, o Streamlit limpa a memória travada na hora
 def carregar_produtos():
     try:
