@@ -24,59 +24,76 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO DIRETA SEM CHAVES)
+# GOOGLE SHEETS VIA TOML
 # ==========================================
+
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 
-# Links de leitura e gravação em tempo real usando o protocolo público do Excel/Sheets
-URL_LEITURA = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
-URL_EXPORTAR = f"https://google.com{ID_PLANILHA}/export?format=csv&sheet=Produtos"
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets"
+]
 
-def carregar_produtos():
-    try:
-        # Lê os dados da aba de Produtos de forma instantânea sem gspread
-        df = pd.read_csv(URL_LEITURA)
-        if df.empty or "Produto" not in df.columns:
-            return pd.DataFrame(columns=["Produto", "Preco"])
-        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
-        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
-    except:
-        return pd.DataFrame(columns=["Produto", "Preco"])
 
-def salvar_produtos(df):
-    # Atualiza a tabela dinamicamente na memória da sua sessão do caixa
-    st.session_state.produtos = df
-    st.toast("💡 Alterações registradas no painel com sucesso!")
+@st.cache_resource
+def conectar_planilha():
+    credenciais = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
 
-# ==========================================
-# CARREGAR E SALVAR PRODUTOS NATIVOS
-# ==========================================
+    cliente = gspread.authorize(credenciais)
+
+    planilha = cliente.open_by_key(ID_PLANILHA)
+
+    return planilha.worksheet("Produtos")
+
+
+aba_produtos = conectar_planilha()
+
+
 @st.cache_data(ttl=5)
 def carregar_produtos():
-    try:
-        # Mudança cirúrgica: Lê o link da internet usando URL_LEITURA
-        df = pd.read_csv(URL_LEITURA)
-        
-        if df.empty or "Produto" not in df.columns:
-            return pd.DataFrame(columns=["Produto", "Preco"])
-            
-        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
-        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
-    except:
-        return pd.DataFrame(columns=["Produto", "Preco"])
+
+    dados = aba_produtos.get_all_records()
+
+    if not dados:
+        return pd.DataFrame(
+            columns=["Produto", "Preco"]
+        )
+
     df = pd.DataFrame(dados)
-    colunas = ["Produto", "Preco"]
-    for col in colunas:
-        if col not in df.columns:
-            df[col] = ""
-    return df[colunas]
+
+    if "Produto" not in df.columns:
+        df["Produto"] = ""
+
+    if "Preco" not in df.columns:
+        df["Preco"] = 0
+
+    df["Preco"] = pd.to_numeric(
+        df["Preco"],
+        errors="coerce"
+    ).fillna(0)
+
+    return df[["Produto", "Preco"]]
+
 
 def salvar_produtos(df):
-    dados = [df.columns.tolist()]
+
+    dados = [
+        ["Produto", "Preco"]
+    ]
+
     dados.extend(df.values.tolist())
+
     aba_produtos.clear()
-    aba_produtos.update(dados)
+
+    aba_produtos.update(
+        "A1",
+        dados
+    )
+
     st.cache_data.clear()
+
 
 if "produtos" not in st.session_state:
     st.session_state.produtos = carregar_produtos()
