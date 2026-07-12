@@ -1,7 +1,6 @@
 import streamlit as st
 import pandas as pd
-import gspread
-from google.oauth2.service_account import Credentials
+import requests
 
 # ==========================================
 # CONFIGURAÇÃO DA PÁGINA
@@ -24,25 +23,27 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS (REMOVIDO O CACHE DE RECURSO)
+# GOOGLE SHEETS (CONEXÃO DIRETA SEM CHAVES)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
-]
 
-# Sem o @st.cache_resource para evitar que o token expire e trave
-def conectar_planilha():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES
-    )
-    cliente = gspread.authorize(creds)
-    return cliente.open_by_key(ID_PLANILHA)
+# URL de leitura rápida que pula o bloqueio de tokens do Google
+URL_LEITURA = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
 
-planilha = conectar_planilha()
-aba_produtos = planilha.worksheet("Produtos")
+def carregar_produtos():
+    try:
+        df = pd.read_csv(URL_LEITURA)
+        if df.empty or "Produto" not in df.columns:
+            return pd.DataFrame(columns=["Produto", "Preco"])
+        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
+        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
+    except:
+        return pd.DataFrame(columns=["Produto", "Preco"])
+
+def salvar_produtos(df):
+    # Salva as alterações na memória local da sua sessão do caixa
+    st.session_state.produtos = df
+    st.toast("💡 Alterações salvas na sessão atual do seu navegador!")
 
 # ==========================================
 # CARREGAR PRODUTOS (TTL DE 60s PARA ESTABILIDADE)
