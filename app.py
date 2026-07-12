@@ -12,7 +12,7 @@ st.sidebar.markdown("# 🏪 Menu Mercadinho")
 st.sidebar.write("Ir para:")
 st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"], index=0, label_visibility="collapsed")
 
-# Injeção de CSS para o cabeçalho e fixação do tamanho original dos botões
+# Injeção de CSS para recriar os botões na proporção exata da imagem original
 st.markdown("""
     <style>
     /* Cabeçalho principal */
@@ -36,33 +36,38 @@ st.markdown("""
         font-size: 14px;
     }
     
-    /* LIMITAÇÃO DE TAMANHO PARA OS BOTÕES VOLTAREM AO ORIGINAL */
-    div[data-testid="stHorizontalBlock"] {
-        max-width: 950px; /* Impede que os botões estiquem demais para a direita */
+    /* CONTAINER DOS BOTÕES COM SIZING CORRETO */
+    .button-container {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 30px;
+        width: 100%;
     }
     
-    /* Estilização interna do botão roxo */
-    div.stButton > button {
+    /* ESTILO IDENTICO DOS BOTOES ROXOS ORIGINAIS */
+    .purple-button {
+        flex: 1;
         background-color: #4A148C !important;
         color: white !important;
-        padding: 18px 0px !important; /* Altura ideal idêntica à imagem */
-        border-radius: 6px !important;
-        font-weight: bold !important;
-        font-size: 15px !important;  
-        width: 100% !important;       
-        display: block !important;
-        border: none !important;
+        padding: 20px 0px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: bold;
+        font-size: 15px;
+        border-radius: 6px;
         box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+        transition: background-color 0.2s ease;
+        display: block;
     }
-    div.stButton > button:hover {
+    
+    .purple-button:hover {
         background-color: #6A1B9A !important;
         color: white !important;
-        border: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# Cabeçalho Principal
+# Cabeçalho Principal (idêntico à imagem)
 st.markdown("""
     <div class="main-header">
         <span>🛍️ MERCADINHO Portal Da Vila</span>
@@ -70,14 +75,14 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Linha de botões com controle de largura máxima ativo
-col_btn1, col_btn2, col_btn3 = st.columns(3)
-with col_btn1:
-    st.button("👥 PESSOAS")
-with col_btn2:
-    st.button("📦 PRODUTOS")
-with col_btn3:
-    st.button("📋 CONTAS A RECEBER")
+# Bloco de Botões com o tamanho, espaçamento e proporção originais restaurados
+st.markdown("""
+    <div class="button-container">
+        <a href="/Pessoas" target="_self" class="purple-button">👥 PESSOAS</a>
+        <a href="/Produtos" target="_self" class="purple-button">📦 PRODUTOS</a>
+        <a href="#" target="_self" class="purple-button">📋 CONTAS A RECEBER</a>
+    </div>
+""", unsafe_allow_html=True)
     
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("## Fluxo de Fiados & Devedores")
