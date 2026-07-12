@@ -121,7 +121,7 @@ with aba_lista:
             st.session_state.produtos, hide_index=True, use_container_width=True, num_rows="dynamic", key="editor_produtos",
             column_config={
                 "Produto": st.column_config.TextColumn("Descrição da Mercadoria", required=True),
-                "Preco": st.column_config.NumberColumn("Preço de Venda (R$)", min_value=0.0, step=0.10, format="R$ %.2f")
+                "Preco": st.column_config.TextColumn("Preço de Venda (R$)", help="Exemplo: 2,50 (Use vírgula para centavos)")
             }
         )
         col1, col2 = st.columns(2)
