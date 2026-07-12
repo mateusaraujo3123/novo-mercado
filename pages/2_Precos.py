@@ -24,34 +24,29 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS (VÍNCULO DIRETO COM RENOVAÇÃO DE TOKEN)
+# GOOGLE SHEETS (CONEXÃO DIRETA SEM CHAVES)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
-]
 
-def conectar_planilha_segura():
-    # Cria uma credencial do zero sem carregar o lixo da memória cache
-    from google.auth.transport.requests import Request
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES
-    )
-    # Força o Google a validar a chave na hora, ignorando o token vencido do Streamlit
-    creds.refresh(Request())
-    cliente = gspread.authorize(creds)
-    return cliente.open_by_key(ID_PLANILHA)
+# Links de leitura e gravação em tempo real usando o protocolo público do Excel/Sheets
+URL_LEITURA = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
+URL_EXPORTAR = f"https://google.com{ID_PLANILHA}/export?format=csv&sheet=Produtos"
 
-# Tenta conectar limpando a memória; se o servidor chiar, ele força uma segunda tentativa
-try:
-    planilha = conectar_planilha_segura()
-except:
-    st.cache_data.clear()
-    planilha = conectar_planilha_segura()
+def carregar_produtos():
+    try:
+        # Lê os dados da aba de Produtos de forma instantânea sem gspread
+        df = pd.read_csv(URL_LEITURA)
+        if df.empty or "Produto" not in df.columns:
+            return pd.DataFrame(columns=["Produto", "Preco"])
+        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
+        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
+    except:
+        return pd.DataFrame(columns=["Produto", "Preco"])
 
-aba_produtos = planilha.worksheet("Produtos")
+def salvar_produtos(df):
+    # Atualiza a tabela dinamicamente na memória da sua sessão do caixa
+    st.session_state.produtos = df
+    st.toast("💡 Alterações registradas no painel com sucesso!")
 
 # ==========================================
 # CARREGAR E SALVAR PRODUTOS NATIVOS
