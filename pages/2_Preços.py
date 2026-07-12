@@ -48,14 +48,15 @@ def salvar_produtos(df):
 @st.cache_data(ttl=5) # Mudando o TTL, o Streamlit limpa a memória travada na hora
 def carregar_produtos():
     try:
-        # Mudança cirúrgica: Lê o link do CSV em vez de usar aba_produtos
+        # Garanta que a linha abaixo esteja escrita exatamente assim:
         df = pd.read_csv(URL_LEITURA)
+        
         if df.empty or "Produto" not in df.columns:
             return pd.DataFrame(columns=["Produto", "Preco"])
+            
         df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
         return df[["Produto", "Preco"]].dropna(subset=["Produto"])
     except:
-        # Se der qualquer erro na rede, devolve uma tabela em branco segura
         return pd.DataFrame(columns=["Produto", "Preco"])
         
 # ==========================================
