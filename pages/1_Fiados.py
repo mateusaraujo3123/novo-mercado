@@ -7,38 +7,23 @@ from datetime import datetime
 # ==========================================
 # CONFIGURAÇÃO DA PÁGINA
 # ==========================================
-st.set_page_config(
-    page_title="Gestão de Fiados - Portal da Vila",
-    page_icon="👥",
-    layout="wide"
-)
+st.set_page_config(page_title="Gestão de Fiados - Portal da Vila", page_icon="👥", layout="wide")
 
 # ==========================================
 # MENU LATERAL COM AS NOVAS ROTAS
 # ==========================================
 st.sidebar.markdown("# 🏪 Menu Mercadinho")
-st.sidebar.radio(
-    "Navegação",
-    ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço", "Histórico de Logs"],
-    index=1,
-    label_visibility="collapsed"
-)
+st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço", "Histórico de Logs"], index=1, label_visibility="collapsed")
 
 # ==========================================
 # GOOGLE SHEETS
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
-]
+SCOPES = ["https://googleapis.com", "https://googleapis.com"]
 
-@st.cache_resource
+# REMOVIDO O @ST.CACHE_RESOURCE PARA ELIMINAR O REFRESHERROR DEFINITIVAMENTE
 def conectar_planilha():
-    creds = Credentials.from_service_account_info(
-        st.secrets["gcp_service_account"],
-        scopes=SCOPES
-    )
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPES)
     cliente = gspread.authorize(creds)
     return cliente.open_by_key(ID_PLANILHA)
 
@@ -57,7 +42,7 @@ def registrar_log(cliente, acao, valor):
         pass
 
 # ==========================================
-# CARREGAR E SALVAR CLIENTES (TTL OPTIMIZADO)
+# CARREGAR E SALVAR CLIENTES
 # ==========================================
 @st.cache_data(ttl=60)
 def carregar_clientes():
