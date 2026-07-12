@@ -24,7 +24,7 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS (MESMO MODELO DE FIADOS)
+# GOOGLE SHEETS (VÍNCULO DIRETO COM RENOVAÇÃO DE TOKEN)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 SCOPES = [
@@ -32,16 +32,25 @@ SCOPES = [
     "https://googleapis.com"
 ]
 
-# Autenticação direta e limpa para evitar RefreshError
-def conectar_planilha():
+def conectar_planilha_segura():
+    # Cria uma credencial do zero sem carregar o lixo da memória cache
+    from google.auth.transport.requests import Request
     creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=SCOPES
     )
+    # Força o Google a validar a chave na hora, ignorando o token vencido do Streamlit
+    creds.refresh(Request())
     cliente = gspread.authorize(creds)
     return cliente.open_by_key(ID_PLANILHA)
 
-planilha = conectar_planilha()
+# Tenta conectar limpando a memória; se o servidor chiar, ele força uma segunda tentativa
+try:
+    planilha = conectar_planilha_segura()
+except:
+    st.cache_data.clear()
+    planilha = conectar_planilha_segura()
+
 aba_produtos = planilha.worksheet("Produtos")
 
 # ==========================================
