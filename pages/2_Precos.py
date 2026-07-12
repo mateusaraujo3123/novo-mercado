@@ -21,28 +21,45 @@ st.sidebar.radio(
     label_visibility="collapsed"
 )
 
+import gspread
+from google.oauth2.service_account import Credentials
+
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO DIRETA SEM CHAVES)
+# GOOGLE SHEETS COM TOML (MODELO OFICIAL FIADOS)
 # ==========================================
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-URL_LEITURA = f"https://google.com{ID_PLANILHA}/gviz/tq?tqx=out:csv&sheet=Produtos"
+SCOPES = [
+    "https://googleapis.com",
+    "https://googleapis.com"
+]
 
-def carregar_produtos():
-    try:
-        df = pd.read_csv(URL_LEITURA)
-        if df.empty or "Produto" not in df.columns:
-            return pd.DataFrame(columns=["Produto", "Preco"])
-        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
-        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
-    except:
-        return pd.DataFrame(columns=["Produto", "Preco"])
+# Conexão nativa lendo direto do seu arquivo TOML do Streamlit
+def conectar_planilha():
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
+    cliente = gspread.authorize(creds)
+    return cliente.open_by_key(ID_PLANILHA)
 
+# Garante a abertura da aba de produtos que você criou
+planilha = conectar_planilha()
+aba_produtos = planilha.worksheet("Produtos")
+
+# ==========================================
+# FUNÇÃO DE SALVAMENTO REAL VIA GSPREAD
+# ==========================================
 def salvar_produtos(df):
-    # Mudança cirúrgica: Removeu aba_produtos.clear() e salva local estável
+    dados = [df.columns.tolist()]
+    dados.extend(df.values.tolist())
+    
+    # Executa a limpeza e a gravação real no seu Google Drive com TOML
+    aba_produtos.clear()
+    aba_produtos.update(dados)
+    
+    # Atualiza a memória interna da tela
     st.session_state.produtos = df
-
-if "produtos" not in st.session_state:
-    st.session_state.produtos = carregar_produtos()
+    st.toast("💾 Gravado com sucesso na planilha via TOML!")
 
 # ==========================================
 # TÍTULO E ABAS
