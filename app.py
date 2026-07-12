@@ -11,11 +11,6 @@ st.set_page_config(
     layout="wide"
 )
 
-# REINTEGRAÇÃO DO MENU LATERAL ORIGINAL
-st.sidebar.markdown("# 🏪 Menu Mercadinho")
-st.sidebar.write("Ir para:")
-st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"], index=0, label_visibility="collapsed")
-
 # Injeção de CSS para recriar o cabeçalho e os botões roxos com o visual idêntico
 st.markdown("""
     <style>
