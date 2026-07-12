@@ -31,7 +31,7 @@ st.sidebar.radio(
 )
 
 # ==========================================
-# GOOGLE SHEETS
+# GOOGLE SHEETS (CONEXÃO DIRETA E SEGURA)
 # ==========================================
 
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
@@ -41,8 +41,7 @@ SCOPES = [
     "https://googleapis.com"
 ]
 
-
-@st.cache_resource
+# Removido o @st.cache_resource para evitar falhas de expiração de token do Google
 def conectar_planilha():
 
     creds = Credentials.from_service_account_info(
@@ -65,7 +64,7 @@ aba_clientes = planilha.worksheet("Clientes")
 # CARREGAR CLIENTES
 # ==========================================
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=2) # Diminuído para atualizar quase instantaneamente sem travar a tela
 def carregar_clientes():
 
     dados = aba_clientes.get_all_records()
