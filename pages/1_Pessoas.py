@@ -37,8 +37,8 @@ st.sidebar.radio(
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
 
 SCOPES = [
-    "https://googleapis.com",
-    "https://googleapis.com"
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive"
 ]
 
 
@@ -124,6 +124,7 @@ st.title("👥 Gestão de Clientes")
 
 st.divider()
 
+# Inclusão de todas as abas requisitadas no menu de navegação
 aba_lista, aba_novo, aba_adicionar, aba_abater, aba_excluir = st.tabs(
     [
         "📋 Clientes",
@@ -235,22 +236,6 @@ with aba_lista:
 
                 st.rerun()
 
-        # ==========================================
-        # APENAS O GRÁFICO ADICIONADO ABAIXO
-        # ==========================================
-        st.write("")
-        st.subheader("📊 Gráfico de Maiores Devedores")
-        
-        df_grafico = st.session_state.clientes.copy()
-        df_grafico["Divida"] = pd.to_numeric(df_grafico["Divida"], errors="coerce").fillna(0.0)
-        df_grafico = df_grafico[df_grafico["Divida"] > 0].sort_values(by="Divida", ascending=True)
-
-        if df_grafico.empty:
-            st.info("Nenhum cliente com dívida ativa para exibir no gráfico.")
-        else:
-            df_chart_data = df_grafico.set_index("Nome")[["Divida"]]
-            st.bar_chart(df_chart_data, horizontal=True, use_container_width=True)
-
 # ==========================================
 # ABA - NOVO CLIENTE
 # ==========================================
@@ -339,23 +324,22 @@ with aba_adicionar:
 
     else:
 
-        with st.form("adicionar_compra", clear_on_submit=True):
+        with st.form("form_adicionar_compra", clear_on_submit=True):
 
             lista_clientes = df_atual["Nome"].tolist()
             
             cliente_comprando = st.selectbox(
                 "Selecione o Cliente que está comprando:",
-                lista_clientes,
-                key="sb_adicionar_compra"
+                lista_clientes
             )
 
-            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values)
-            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values)
+            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values[0])
+            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values[0])
             disponivel = max(0.0, limite_atual - divida_atual)
 
             st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
-            value_compra = st.number_input(
+            valor_compra = st.number_input(
                 "Valor da Nova Compra (R$)",
                 min_value=0.01,
                 value=10.0,
@@ -369,13 +353,14 @@ with aba_adicionar:
 
         if confirmar_compra:
 
-            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + value_compra
+            # Soma a nova compra ao saldo devedor atual do cliente
+            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
             
             salvar_clientes(df_atual)
 
             st.session_state.clientes = carregar_clientes()
 
-            st.success(f"✅ R$ {value_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
+            st.success(f"✅ R$ {valor_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
 
             st.rerun()
 
@@ -388,6 +373,8 @@ with aba_abater:
     st.subheader("Registrar Pagamento de Cliente")
 
     df_atual = carregar_clientes()
+    
+    # Filtra apenas quem deve de verdade para facilitar a busca
     df_devedores = df_atual[pd.to_numeric(df_atual["Divida"], errors="coerce").fillna(0) > 0]
 
     if df_devedores.empty:
@@ -396,17 +383,16 @@ with aba_abater:
 
     else:
 
-        with st.form("abater_divida", clear_on_submit=True):
+        with st.form("form_abater_divida", clear_on_submit=True):
 
             lista_devedores = df_devedores["Nome"].tolist()
             
             cliente_pagando = st.selectbox(
                 "Selecione o Cliente:",
-                lista_devedores,
-                key="sb_abater_divida"
+                lista_devedores
             )
 
-            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
+            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values[0])
             st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
             valor_pago = st.number_input(
@@ -414,7 +400,8 @@ with aba_abater:
                 min_value=0.01,
                 max_value=divida_atual,
                 value=divida_atual,
-                step=5.0
+                step=5.0,
+                help="O valor pago não pode ser maior do que a dívida atual."
             )
 
             confirmar_pagamento = st.form_submit_button(
@@ -424,6 +411,7 @@ with aba_abater:
 
         if confirmar_pagamento:
 
+            # Subtrai o valor pago da dívida atual na planilha
             df_atual.loc[df_atual["Nome"] == cliente_pagando, "Divida"] = divida_atual - valor_pago
             
             salvar_clientes(df_atual)
@@ -450,7 +438,7 @@ with aba_excluir:
 
     else:
 
-        with st.form("remover_cliente"):
+        with st.form("form_remover_cliente"):
 
             lista_todos = df_atual["Nome"].tolist()
 
@@ -478,6 +466,7 @@ with aba_excluir:
 
             else:
 
+                # Gera uma nova tabela sem o cliente excluído
                 df_filtrado = df_atual[df_atual["Nome"] != cliente_remover]
 
                 salvar_clientes(df_filtrado)
@@ -531,8 +520,8 @@ with c2:
 with c3:
     st.metric(
         "Limite Total",
-        
-f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+        f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
 
 st.divider()
 
