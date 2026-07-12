@@ -10,10 +10,9 @@ st.set_page_config(
 # REINTEGRAÇÃO DO MENU LATERAL
 st.sidebar.markdown("# 🏪 Menu Mercadinho")
 st.sidebar.write("Ir para:")
-# Força a marcação visual da página onde o usuário está atualmente
 st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"], index=0, label_visibility="collapsed")
 
-# Injeção de CSS corrigida para fixar o tamanho gigante dos botões roxos
+# Injeção de CSS para o cabeçalho e fixação do tamanho original dos botões
 st.markdown("""
     <style>
     /* Cabeçalho principal */
@@ -37,19 +36,23 @@ st.markdown("""
         font-size: 14px;
     }
     
-    /* CORREÇÃO DOS BOTÕES ROXOS GIGANTES */
+    /* LIMITAÇÃO DE TAMANHO PARA OS BOTÕES VOLTAREM AO ORIGINAL */
+    div[data-testid="stHorizontalBlock"] {
+        max-width: 950px; /* Impede que os botões estiquem demais para a direita */
+    }
+    
+    /* Estilização interna do botão roxo */
     div.stButton > button {
         background-color: #4A148C !important;
         color: white !important;
-        padding: 24px 0px !important; /* Aumenta a altura interna */
-        border-radius: 8px !important;
+        padding: 18px 0px !important; /* Altura ideal idêntica à imagem */
+        border-radius: 6px !important;
         font-weight: bold !important;
-        font-size: 18px !important;  /* Letra maior e mais visível */
-        width: 100% !important;       /* Obriga a ocupar toda a largura da coluna */
+        font-size: 15px !important;  
+        width: 100% !important;       
         display: block !important;
         border: none !important;
         box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
-        letter-spacing: 1px;
     }
     div.stButton > button:hover {
         background-color: #6A1B9A !important;
@@ -59,7 +62,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Cabeçalho Principal (idêntico à imagem)
+# Cabeçalho Principal
 st.markdown("""
     <div class="main-header">
         <span>🛍️ MERCADINHO Portal Da Vila</span>
@@ -67,7 +70,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Botões de Atalho Superiores restaurados ao tamanho grande horizontal
+# Linha de botões com controle de largura máxima ativo
 col_btn1, col_btn2, col_btn3 = st.columns(3)
 with col_btn1:
     st.button("👥 PESSOAS")
