@@ -69,14 +69,27 @@ def carregar_produtos():
     if "Preco" not in df.columns:
         df["Preco"] = 0
 
-    # Converte o lixo da planilha para número e depois formata como texto usando vírgula
-    df["Preco"] = pd.to_numeric(
-        df["Preco"].astype(str).str.replace(",", ".", regex=False),
-        errors="coerce"
-    ).fillna(0.0).map(lambda x: f"{x:.2f}".replace(".", ","))
+    # -----------------------------------------------------------------
+    # AJUSTE DA CONVERSÃO PARA EVITAR MULTIPLICAÇÃO POR 100
+    # -----------------------------------------------------------------
+    # Converte para string e limpa qualquer espaço em branco
+    df["Preco"] = df["Preco"].astype(str).str.strip()
+    
+    # Se o valor vier com ponto (ex: 2.5), troca por vírgula direto antes de formatar
+    def formatar_preco_br(val):
+        try:
+            # Se já tiver vírgula, garante que tenha duas casas decimais corretas
+            if "," in val:
+                num = float(val.replace(",", "."))
+            else:
+                num = float(val)
+            return f"{num:.2f}".replace(".", ",")
+        except:
+            return "0,00"
+
+    df["Preco"] = df["Preco"].apply(formatar_preco_br)
 
     return df[["Produto", "Preco"]]
-
 
 def salvar_produtos(df):
 
