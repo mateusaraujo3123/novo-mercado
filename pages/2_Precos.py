@@ -150,6 +150,7 @@ with aba_lista:
     st.success("Tabela de preços atualizada com sucesso!")
 
     st.rerun()
+    
         with col2:
             if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
                 st.session_state.produtos = carregar_produtos()
