@@ -3,39 +3,38 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 
-
 # ==========================================
 # CONFIGURAÇÃO DA PÁGINA
 # ==========================================
 
 st.set_page_config(
     page_title="Gestão de Fiados - Portal da Vila",
-    page_icon="🏪",
+    page_icon="👥",
     layout="wide"
 )
-
 
 # ==========================================
 # MENU LATERAL
 # ==========================================
 
-st.sidebar.title("🏪 Portal da Vila")
+st.sidebar.markdown("# 🏪 Menu Mercadinho")
 
-pagina = st.sidebar.radio(
-    "Menu",
+st.sidebar.radio(
+    "Navegação",
     [
-        "Dashboard",
-        "Gestão de Fiados"
-    ]
+        "Dashboard Inicial",
+        "Gestão de Fiados",
+        "Tabelas de Preço"
+    ],
+    index=1,
+    label_visibility="collapsed"
 )
-
 
 # ==========================================
 # GOOGLE SHEETS
 # ==========================================
 
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
-
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -46,37 +45,32 @@ SCOPES = [
 @st.cache_resource
 def conectar_planilha():
 
-    credenciais = Credentials.from_service_account_info(
+    creds = Credentials.from_service_account_info(
         st.secrets["gcp_service_account"],
         scopes=SCOPES
     )
 
-    cliente = gspread.authorize(
-        credenciais
-    )
+    cliente = gspread.authorize(creds)
 
-    return cliente.open_by_key(
-        ID_PLANILHA
-    )
+    planilha = cliente.open_by_key(ID_PLANILHA)
+
+    return planilha
 
 
 planilha = conectar_planilha()
 
 aba_clientes = planilha.worksheet("Clientes")
 
-
-
 # ==========================================
 # CARREGAR CLIENTES
 # ==========================================
 
-@st.cache_data(ttl=10)
+@st.cache_data(ttl=5)
 def carregar_clientes():
 
     dados = aba_clientes.get_all_records()
 
-
-    if not dados:
+    if len(dados) == 0:
 
         return pd.DataFrame(
             columns=[
@@ -86,547 +80,449 @@ def carregar_clientes():
             ]
         )
 
-
     df = pd.DataFrame(dados)
 
+    colunas = ["Nome", "Limite", "Divida"]
 
-    for coluna in [
-        "Nome",
-        "Limite",
-        "Divida"
-    ]:
+    for coluna in colunas:
 
         if coluna not in df.columns:
-            df[coluna] = 0
 
+            df[coluna] = ""
 
-    df["Limite"] = pd.to_numeric(
-        df["Limite"],
-        errors="coerce"
-    ).fillna(0)
-
-
-    df["Divida"] = pd.to_numeric(
-        df["Divida"],
-        errors="coerce"
-    ).fillna(0)
-
-
-    return df[
-        [
-            "Nome",
-            "Limite",
-            "Divida"
-        ]
-    ]
-
-
+    return df[colunas]
 
 # ==========================================
-# SALVAR
+# SALVAR PLANILHA
 # ==========================================
 
 def salvar_clientes(df):
 
-    dados = [
-        df.columns.tolist()
-    ]
+    dados = [df.columns.tolist()]
 
-    dados += df.values.tolist()
-
+    dados.extend(df.values.tolist())
 
     aba_clientes.clear()
 
-    aba_clientes.update(
-        dados
-    )
-
+    aba_clientes.update(dados)
 
     carregar_clientes.clear()
 
 # ==========================================
-# GESTÃO DE FIADOS
+# SESSION STATE
 # ==========================================
 
-if pagina == "Gestão de Fiados":
+if "clientes" not in st.session_state:
 
-    st.title("👥 Gestão de Clientes")
-
-    df_clientes = carregar_clientes()
-
-
-    aba_lista, aba_novo, aba_compra, aba_pagamento, aba_excluir = st.tabs(
-        [
-            "📋 Clientes",
-            "➕ Novo Cliente",
-            "🛒 Adicionar Compra",
-            "💰 Receber Pagamento",
-            "❌ Excluir Cliente"
-        ]
-    )
-
-
-    # ==========================================
-    # LISTA DE CLIENTES
-    # ==========================================
-
-    with aba_lista:
-
-        st.subheader("Clientes Cadastrados")
-
-
-        if df_clientes.empty:
-
-            st.info("Nenhum cliente cadastrado.")
-
-        else:
-
-            editado = st.data_editor(
-                df_clientes,
-                hide_index=True,
-                use_container_width=True,
-                column_config={
-
-                    "Nome": st.column_config.TextColumn(
-                        "Nome"
-                    ),
-
-                    "Limite": st.column_config.NumberColumn(
-                        "Limite (R$)",
-                        format="R$ %.2f"
-                    ),
-
-                    "Divida": st.column_config.NumberColumn(
-                        "Dívida (R$)",
-                        format="R$ %.2f"
-                    )
-                }
-            )
-
-
-            if st.button(
-                "💾 Salvar Alterações",
-                type="primary"
-            ):
-
-                salvar_clientes(editado)
-
-                st.success(
-                    "Dados atualizados!"
-                )
-
-                st.rerun()
-
-
-
-    # ==========================================
-    # NOVO CLIENTE
-    # ==========================================
-
-    with aba_novo:
-
-        st.subheader(
-            "Cadastrar Cliente"
-        )
-
-
-        with st.form(
-            "novo_cliente"
-        ):
-
-            nome = st.text_input(
-                "Nome"
-            )
-
-            limite = st.number_input(
-                "Limite de Fiado",
-                min_value=0.0,
-                value=200.0
-            )
-
-
-            salvar = st.form_submit_button(
-                "Cadastrar"
-            )
-
-
-        if salvar:
-
-
-            if nome.strip() == "":
-
-                st.error(
-                    "Digite o nome do cliente."
-                )
-
-            else:
-
-                df = carregar_clientes()
-
-
-                existe = (
-                    df["Nome"]
-                    .astype(str)
-                    .str.lower()
-                    .eq(nome.lower())
-                    .any()
-                )
-
-
-                if existe:
-
-                    st.error(
-                        "Cliente já cadastrado."
-                    )
-
-                else:
-
-                    novo = pd.DataFrame(
-                        [
-                            {
-                                "Nome": nome,
-                                "Limite": limite,
-                                "Divida": 0
-                            }
-                        ]
-                    )
-
-
-                    df = pd.concat(
-                        [
-                            df,
-                            novo
-                        ],
-                        ignore_index=True
-                    )
-
-
-                    salvar_clientes(df)
-
-
-                    st.success(
-                        "Cliente cadastrado!"
-                    )
-
-                    st.rerun()
-
-
-
-    # ==========================================
-    # ADICIONAR COMPRA
-    # ==========================================
-
-    with aba_compra:
-
-        st.subheader(
-            "Adicionar Compra Fiada"
-        )
-
-
-        df = carregar_clientes()
-
-
-        if df.empty:
-
-            st.info(
-                "Cadastre clientes primeiro."
-            )
-
-        else:
-
-
-            cliente = st.selectbox(
-                "Cliente",
-                df["Nome"]
-            )
-
-
-            valor = st.number_input(
-                "Valor da compra",
-                min_value=0.01,
-                step=5.0
-            )
-
-
-            if st.button(
-                "Confirmar Compra"
-            ):
-
-
-                df.loc[
-                    df["Nome"] == cliente,
-                    "Divida"
-                ] += valor
-
-
-                salvar_clientes(df)
-
-
-                st.success(
-                    "Compra adicionada!"
-                )
-
-                st.rerun()
-
-
-
-    # ==========================================
-    # PAGAMENTO
-    # ==========================================
-
-    with aba_pagamento:
-
-        st.subheader(
-            "Receber Pagamento"
-        )
-
-
-        df = carregar_clientes()
-
-
-        devedores = df[
-            df["Divida"] > 0
-        ]
-
-
-        if devedores.empty:
-
-            st.info(
-                "Nenhum cliente devendo."
-            )
-
-        else:
-
-
-            cliente = st.selectbox(
-                "Cliente",
-                devedores["Nome"]
-            )
-
-
-            divida = float(
-                devedores[
-                    devedores["Nome"] == cliente
-                ]["Divida"].iloc[0]
-            )
-
-
-            pagamento = st.number_input(
-                "Valor pago",
-                min_value=0.01,
-                max_value=divida,
-                value=divida
-            )
-
-
-            if st.button(
-                "Confirmar Pagamento"
-            ):
-
-
-                df.loc[
-                    df["Nome"] == cliente,
-                    "Divida"
-                ] -= pagamento
-
-
-                salvar_clientes(df)
-
-
-                st.success(
-                    "Pagamento registrado!"
-                )
-
-                st.rerun()
-
-    # ==========================================
-    # EXCLUIR CLIENTE
-    # ==========================================
-
-    with aba_excluir:
-
-        st.subheader(
-            "Excluir Cliente"
-        )
-
-
-        df = carregar_clientes()
-
-
-        if df.empty:
-
-            st.info(
-                "Não existem clientes cadastrados."
-            )
-
-        else:
-
-
-            cliente = st.selectbox(
-                "Escolha o cliente para excluir",
-                df["Nome"]
-            )
-
-
-            confirmar = st.checkbox(
-                "Confirmo que desejo excluir este cliente"
-            )
-
-
-            if st.button(
-                "❌ Excluir Cliente",
-                type="primary"
-            ):
-
-
-                if confirmar:
-
-
-                    df = df[
-                        df["Nome"] != cliente
-                    ]
-
-
-                    salvar_clientes(df)
-
-
-                    st.success(
-                        "Cliente removido!"
-                    )
-
-                    st.rerun()
-
-
-                else:
-
-                    st.warning(
-                        "Marque a confirmação primeiro."
-                    )
-
-
+    st.session_state.clientes = carregar_clientes()
 
 # ==========================================
-# DASHBOARD
+# TÍTULO
 # ==========================================
 
-if pagina == "Dashboard":
-
-
-    st.title(
-        "📊 Dashboard - Portal da Vila"
-    )
-
-
-    df = carregar_clientes()
-
-
-    total_clientes = len(df)
-
-
-    total_divida = df["Divida"].sum()
-
-
-    total_limite = df["Limite"].sum()
-
-
-
-    col1, col2, col3 = st.columns(3)
-
-
-    with col1:
-
-        st.metric(
-            "👥 Clientes",
-            total_clientes
-        )
-
-
-    with col2:
-
-        st.metric(
-            "💰 Total Fiado",
-            f"R$ {total_divida:,.2f}"
-        )
-
-
-    with col3:
-
-        st.metric(
-            "📌 Limite Total",
-            f"R$ {total_limite:,.2f}"
-        )
-
-
-
-    st.divider()
-
-
-
-    # ==========================================
-    # GRÁFICO DOS MAIORES DEVEDORES
-    # ==========================================
-
-    st.subheader(
-        "🏆 Maiores Devedores"
-    )
-
-
-    ranking = df.copy()
-
-
-    ranking = ranking[
-        ranking["Divida"] > 0
-    ]
-
-
-    ranking = ranking.sort_values(
-        "Divida",
-        ascending=False
-    )
-
-
-    if ranking.empty:
-
-
-        st.info(
-            "Nenhum fiado registrado."
-        )
-
-
-    else:
-
-
-        st.dataframe(
-            ranking[
-                [
-                    "Nome",
-                    "Divida"
-                ]
-            ],
-            hide_index=True,
-            use_container_width=True
-        )
-
-
-        grafico = ranking.set_index(
-            "Nome"
-        )[
-            [
-                "Divida"
-            ]
-        ]
-
-
-        st.bar_chart(
-            grafico,
-            use_container_width=True
-        )
-
-
+st.title("👥 Gestão de Clientes")
 
 st.divider()
 
-
-st.caption(
-    "Portal da Vila • Sistema de Gestão de Fiados"
+# Inclusão de todas as abas requisitadas no menu de navegação
+aba_lista, aba_novo, aba_adicionar, aba_abater, aba_excluir = st.tabs(
+    [
+        "📋 Clientes",
+        "➕ Novo Cliente",
+        "✍️ Adicionar Compra",
+        "💰 Receber Pagamento",
+        "❌ Remover Cliente"
+    ]
 )
+# ==========================================
+# ABA - CLIENTES
+# ==========================================
+
+with aba_lista:
+
+    st.subheader("Clientes Cadastrados")
+
+    if st.session_state.clientes.empty:
+
+        st.info("Nenhum cliente cadastrado.")
+
+    else:
+
+        clientes_editados = st.data_editor(
+
+            st.session_state.clientes,
+
+            hide_index=True,
+
+            use_container_width=True,
+
+            num_rows="dynamic",
+
+            key="editor_clientes",
+
+            column_config={
+
+                "Nome": st.column_config.TextColumn(
+
+                    "Nome",
+
+                    required=True
+
+                ),
+
+                "Limite": st.column_config.NumberColumn(
+
+                    "Limite (R$)",
+
+                    min_value=0,
+
+                    step=10,
+
+                    format="R$ %.2f"
+
+                ),
+
+                "Divida": st.column_config.NumberColumn(
+
+                    "Dívida (R$)",
+
+                    min_value=0,
+
+                    step=1,
+
+                    format="R$ %.2f"
+
+                )
+
+            }
+
+        )
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+
+            if st.button(
+
+                "💾 Salvar Alterações",
+
+                use_container_width=True,
+
+                type="primary"
+
+            ):
+
+                clientes_editados = clientes_editados.fillna("")
+
+                salvar_clientes(clientes_editados)
+
+                st.session_state.clientes = carregar_clientes()
+
+                st.success("Clientes updated com sucesso!")
+
+                st.rerun()
+
+        with col2:
+
+            if st.button(
+
+                "🔄 Atualizar Lista",
+
+                use_container_width=True
+
+            ):
+
+                st.session_state.clientes = carregar_clientes()
+
+                st.rerun()
+
+# ==========================================
+# ABA - NOVO CLIENTE
+# ==========================================
+
+with aba_novo:
+
+    st.subheader("Cadastrar Novo Cliente")
+
+    with st.form("novo_cliente", clear_on_submit=True):
+
+        nome = st.text_input(
+            "Nome do Cliente"
+        )
+
+        limite = st.number_input(
+            "Limite de Fiado",
+            min_value=0.0,
+            value=200.0,
+            step=50.0
+        )
+
+        enviar = st.form_submit_button(
+            "Cadastrar",
+            type="primary"
+        )
+
+    if enviar:
+
+        nome = nome.strip()
+
+        if nome == "":
+
+            st.error("Informe o nome do cliente.")
+
+        else:
+
+            df = carregar_clientes()
+
+            nomes = (
+                df["Nome"]
+                .astype(str)
+                .str.strip()
+                .str.lower()
+            )
+
+            if nome.lower() in nomes.values:
+
+                st.error("Este cliente já está cadastrado.")
+
+            else:
+
+                nova_linha = pd.DataFrame([
+                    {
+                        "Nome": nome,
+                        "Limite": limite,
+                        "Divida": 0.0
+                    }
+                ])
+
+                df = pd.concat(
+                    [df, nova_linha],
+                    ignore_index=True
+                )
+
+                salvar_clientes(df)
+
+                st.session_state.clientes = carregar_clientes()
+
+                st.success(f"{nome} cadastrado com sucesso!")
+
+                st.rerun()
+
+# ==========================================
+# ABA - ADICIONAR COMPRA (AUMENTAR DÍVIDA)
+# ==========================================
+
+with aba_adicionar:
+
+    st.subheader("Registrar Nova Compra no Fiado")
+
+    df_atual = carregar_clientes()
+
+    if df_atual.empty:
+
+        st.info("Nenhum cliente cadastrado.")
+
+    else:
+
+        with st.form("form_adicionar_compra", clear_on_submit=True):
+
+            lista_clientes = df_atual["Nome"].tolist()
+            
+            cliente_comprando = st.selectbox(
+                "Selecione o Cliente que está comprando:",
+                lista_clientes
+            )
+
+            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values[0])
+            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values[0])
+            disponivel = max(0.0, limite_atual - divida_atual)
+
+            st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            valor_compra = st.number_input(
+                "Valor da Nova Compra (R$)",
+                min_value=0.01,
+                value=10.0,
+                step=5.0
+            )
+
+            confirmar_compra = st.form_submit_button(
+                "Confirmar Nova Compra",
+                type="primary"
+            )
+
+        if confirmar_compra:
+
+            # Soma a nova compra ao saldo devedor atual do cliente
+            df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
+            
+            salvar_clientes(df_atual)
+
+            st.session_state.clientes = carregar_clientes()
+
+            st.success(f"✅ R$ {valor_compra:,.2f} adicionados à conta de {cliente_comprando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            st.rerun()
+
+# ==========================================
+# ABA - RECEBER PAGAMENTO (ABATER DÍVIDA)
+# ==========================================
+
+with aba_abater:
+
+    st.subheader("Registrar Pagamento de Cliente")
+
+    df_atual = carregar_clientes()
+    
+    # Filtra apenas quem deve de verdade para facilitar a busca
+    df_devedores = df_atual[pd.to_numeric(df_atual["Divida"], errors="coerce").fillna(0) > 0]
+
+    if df_devedores.empty:
+
+        st.info("Nenhum cliente possui dívidas pendentes no momento.")
+
+    else:
+
+        with st.form("form_abater_divida", clear_on_submit=True):
+
+            lista_devedores = df_devedores["Nome"].tolist()
+            
+            cliente_pagando = st.selectbox(
+                "Selecione o Cliente:",
+                lista_devedores
+            )
+
+            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values[0])
+            st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            valor_pago = st.number_input(
+                "Valor Pago (R$)",
+                min_value=0.01,
+                max_value=divida_atual,
+                value=divida_atual,
+                step=5.0,
+                help="O valor pago não pode ser maior do que a dívida atual."
+            )
+
+            confirmar_pagamento = st.form_submit_button(
+                "Confirmar Recebimento",
+                type="primary"
+            )
+
+        if confirmar_pagamento:
+
+            # Subtrai o valor pago da dívida atual na planilha
+            df_atual.loc[df_atual["Nome"] == cliente_pagando, "Divida"] = divida_atual - valor_pago
+            
+            salvar_clientes(df_atual)
+
+            st.session_state.clientes = carregar_clientes()
+
+            st.success(f"✅ R$ {valor_pago:,.2f} abatidos da conta de {cliente_pagando} com sucesso!".replace(",", "X").replace(".", ",").replace("X", "."))
+
+            st.rerun()
+
+# ==========================================
+# ABA - REMOVER CLIENTE
+# ==========================================
+
+with aba_excluir:
+
+    st.subheader("Excluir Cliente do Sistema")
+
+    df_atual = carregar_clientes()
+
+    if df_atual.empty:
+
+        st.info("Nenhum cliente cadastrado para remover.")
+
+    else:
+
+        with st.form("form_remover_cliente"):
+
+            lista_todos = df_atual["Nome"].tolist()
+
+            cliente_remover = st.selectbox(
+                "Selecione o cliente que deseja apagar permanentemente:",
+                lista_todos
+            )
+
+            st.error("⚠️ Atenção: Esta ação não pode ser desfeita. O cliente será deletado da planilha.")
+
+            caixa_confirmacao = st.checkbox(
+                f"Confirmo que desejo deletar o cadastro de {cliente_remover}"
+            )
+
+            botao_deletar = st.form_submit_button(
+                "Excluir Cadastro Definitivamente",
+                type="primary"
+            )
+
+        if botao_deletar:
+
+            if not caixa_confirmacao:
+
+                st.error("Marque a caixa de confirmação para poder excluir.")
+
+            else:
+
+                # Gera uma nova tabela sem o cliente excluído
+                df_filtrado = df_atual[df_atual["Nome"] != cliente_remover]
+
+                salvar_clientes(df_filtrado)
+
+                st.session_state.clientes = carregar_clientes()
+
+                st.success(f"{cliente_remover} foi removido do sistema!")
+
+                st.rerun()
+
+# ==========================================
+# RODAPÉ
+# ==========================================
+
+st.divider()
+
+total_clientes = len(st.session_state.clientes)
+
+total_divida = (
+    pd.to_numeric(
+        st.session_state.clientes["Divida"],
+        errors="coerce"
+    )
+    .fillna(0)
+    .sum()
+)
+
+total_limite = (
+    pd.to_numeric(
+        st.session_state.clientes["Limite"],
+        errors="coerce"
+    )
+    .fillna(0)
+    .sum()
+)
+
+c1, c2, c3 = st.columns(3)
+
+with c1:
+    st.metric(
+        "Clientes",
+        total_clientes
+    )
+
+with c2:
+    st.metric(
+        "Total em Fiados",
+        f"R$ {total_divida:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+
+with c3:
+    st.metric(
+        "Limite Total",
+        f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+
+st.divider()
+
+st.caption("Portal da Vila • Gestão de Clientes")
