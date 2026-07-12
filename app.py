@@ -7,7 +7,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Injeção de CSS para o cabeçalho e estilização dos botões roxos
+# REINTEGRAÇÃO DO MENU LATERAL
+st.sidebar.markdown("# 🏪 Menu Mercadinho")
+st.sidebar.write("Ir para:")
+# Força a marcação visual da página onde o usuário está atualmente
+st.sidebar.radio("Navegação", ["Dashboard Inicial", "Gestão de Fiados", "Tabelas de Preço"], index=0, label_visibility="collapsed")
+
+# Injeção de CSS corrigida para fixar o tamanho gigante dos botões roxos
 st.markdown("""
     <style>
     /* Cabeçalho principal */
@@ -18,7 +24,7 @@ st.markdown("""
         border-radius: 8px;
         font-size: 24px;
         font-weight: bold;
-        margin-bottom: 20px;
+        margin-bottom: 25px;
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -30,18 +36,20 @@ st.markdown("""
         border-radius: 20px;
         font-size: 14px;
     }
-    /* Estilização dos botões para ficarem roxos e grandes */
+    
+    /* CORREÇÃO DOS BOTÕES ROXOS GIGANTES */
     div.stButton > button {
         background-color: #4A148C !important;
         color: white !important;
-        padding: 20px !important;
+        padding: 24px 0px !important; /* Aumenta a altura interna */
         border-radius: 8px !important;
         font-weight: bold !important;
-        font-size: 16px !important;
-        width: 100% !important;
+        font-size: 18px !important;  /* Letra maior e mais visível */
+        width: 100% !important;       /* Obriga a ocupar toda a largura da coluna */
+        display: block !important;
         border: none !important;
-        box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
-        transition: background-color 0.3s ease;
+        box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+        letter-spacing: 1px;
     }
     div.stButton > button:hover {
         background-color: #6A1B9A !important;
@@ -59,7 +67,7 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Botões de Atalho Superiores (Apenas informativos nesta visão isolada)
+# Botões de Atalho Superiores restaurados ao tamanho grande horizontal
 col_btn1, col_btn2, col_btn3 = st.columns(3)
 with col_btn1:
     st.button("👥 PESSOAS")
@@ -68,7 +76,7 @@ with col_btn2:
 with col_btn3:
     st.button("📋 CONTAS A RECEBER")
     
-st.markdown("---")
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("## Fluxo de Fiados & Devedores")
 
 # Seção Central de Alertas e Maiores Devedores
