@@ -13,6 +13,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# Força o Streamlit a limpar a memória cache de dados toda vez que a Home carrega
+st.cache_data.clear()
+
 # Injeção de CSS para recriar o cabeçalho e os botões roxos no tamanho original
 st.markdown("""
     <style>
@@ -66,7 +69,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# GOOGLE SHEETS (LEITURA DIRETA)
+# GOOGLE SHEETS (LEITURA LIMPA E OBRIGATÓRIA)
 # ==========================================
 
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
@@ -122,7 +125,6 @@ st.markdown("""
 col_btn1, col_btn2, col_btn3 = st.columns(3)
 
 with col_btn1:
-    # Ao clicar, usa a função nativa do Streamlit para ir para o arquivo da pasta pages
     if st.button("👥 PESSOAS", use_container_width=True):
         st.switch_page("pages/1_Pessoas.py")
         
