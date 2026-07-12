@@ -53,8 +53,16 @@ def salvar_produtos(df):
 # ==========================================
 @st.cache_data(ttl=5)
 def carregar_produtos():
-    dados = aba_produtos.get_all_records()
-    if len(dados) == 0:
+    try:
+        # Mudança cirúrgica: Lê o link da internet usando URL_LEITURA
+        df = pd.read_csv(URL_LEITURA)
+        
+        if df.empty or "Produto" not in df.columns:
+            return pd.DataFrame(columns=["Produto", "Preco"])
+            
+        df["Preco"] = pd.to_numeric(df["Preco"], errors="coerce").fillna(0.0)
+        return df[["Produto", "Preco"]].dropna(subset=["Produto"])
+    except:
         return pd.DataFrame(columns=["Produto", "Preco"])
     df = pd.DataFrame(dados)
     colunas = ["Produto", "Preco"]
