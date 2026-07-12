@@ -45,7 +45,7 @@ def salvar_produtos(df):
     st.session_state.produtos = df
     st.toast("💡 Alterações salvas na sessão atual do seu navegador!")
 
-@st.cache_data(ttl=60)
+@st.cache_data(ttl=5) # Mudando o TTL, o Streamlit limpa a memória travada na hora
 def carregar_produtos():
     try:
         # Mudança cirúrgica: Lê o link do CSV em vez de usar aba_produtos
