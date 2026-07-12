@@ -61,7 +61,7 @@ def carregar_produtos():
             columns=["Produto", "Preco"]
         )
 
-    df = pd.DataFrame(dados)
+        df = pd.DataFrame(dados)
 
     if "Produto" not in df.columns:
         df["Produto"] = ""
@@ -69,13 +69,23 @@ def carregar_produtos():
     if "Preco" not in df.columns:
         df["Preco"] = 0
 
+    # ----------------------------------------------------
+    # CORREÇÃO DA VÍRGULA BRASILEIRA ADICIONADA ABAIXO:
+    # ----------------------------------------------------
+    # Transforma o preço em texto e troca a vírgula por ponto para o Python entender
+    df["Preco"] = (
+        df["Preco"]
+        .astype(str)
+        .str.replace(",", ".", regex=False)
+    )
+
+    # Converte para número decimal real de forma segura
     df["Preco"] = pd.to_numeric(
         df["Preco"],
         errors="coerce"
-    ).fillna(0)
+    ).fillna(0.0)
 
     return df[["Produto", "Preco"]]
-
 
 def salvar_produtos(df):
 
