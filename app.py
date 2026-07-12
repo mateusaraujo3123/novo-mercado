@@ -66,7 +66,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# GOOGLE SHEETS (CONEXÃO DIRETA SEM TRAVA DE CACHE)
+# GOOGLE SHEETS (LEITURA DIRETA)
 # ==========================================
 
 ID_PLANILHA = "1u_bK8xpagg6AzDG9Slij9kyAWaa71roChrhCYYqL7ow"
@@ -84,7 +84,6 @@ def conectar_planilha():
     cliente = gspread.authorize(creds)
     return cliente.open_by_key(ID_PLANILHA)
 
-# Criamos uma função sem o @st.cache_data para forçar o app.py a ler a planilha real toda vez
 def buscar_dados_frescos():
     try:
         planilha = conectar_planilha()
@@ -96,19 +95,16 @@ def buscar_dados_frescos():
             
         df = pd.DataFrame(dados)
         
-        # Garante a existência das colunas para evitar erros de cálculo
         for col in ["Nome", "Limite", "Divida"]:
             if col not in df.columns:
                 df[col] = 0.0
                 
-        # Força os números a virarem formato matemático legível pelo Python
         df["Divida"] = pd.to_numeric(df["Divida"], errors="coerce").fillna(0.0)
         df["Limite"] = pd.to_numeric(df["Limite"], errors="coerce").fillna(0.0)
         return df
     except:
         return pd.DataFrame(columns=["Nome", "Limite", "Divida"])
 
-# Carrega os dados mais recentes diretamente do Google Drive
 df_clientes = buscar_dados_frescos()
 # ==========================================
 # CONTEÚDO VISUAL DO DASHBOARD
@@ -122,15 +118,23 @@ st.markdown("""
     </div>
 """, unsafe_allow_html=True)
 
-# Botões de Atalho Superiores com Links para as Subpastas
-st.markdown("""
-    <div class="button-container">
-        <a href="/Gestao_de_Fiados" target="_self" class="purple-button">👥 PESSOAS</a>
-        <a href="/Tabelas_de_Preco" target="_self" class="purple-button">📦 PRODUTOS</a>
-        <a href="#" target="_self" class="purple-button">📋 CONTAS A RECEBER</a>
-    </div>
-""", unsafe_allow_html=True)
-    
+# Botões de Atalho Superiores com Navegação Segura e Nativa
+col_btn1, col_btn2, col_btn3 = st.columns(3)
+
+with col_btn1:
+    # Ao clicar, usa a função nativa do Streamlit para ir para o arquivo da pasta pages
+    if st.button("👥 PESSOAS", use_container_width=True):
+        st.switch_page("pages/1_Pessoas.py")
+        
+with col_btn2:
+    if st.button("📦 PRODUTOS", use_container_width=True):
+        # Altere para o nome exato do seu arquivo de produtos quando criá-lo
+        st.switch_page("pages/2_Produtos.py")
+        
+with col_btn3:
+    if st.button("📋 CONTAS A RECEBER", use_container_width=True):
+        st.info("Aba Contas a Receber em desenvolvimento.")
+
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown("## Fluxo de Fiados & Devedores")
 
@@ -153,7 +157,6 @@ with col_centro1:
         
 with col_centro2:
     st.subheader("⚠️ Alertas do Estoque")
-    # Mantido informativo até criarmos a aba de produtos
     st.info("Nenhum produto cadastrado na planilha.")
     
 st.markdown("---")
