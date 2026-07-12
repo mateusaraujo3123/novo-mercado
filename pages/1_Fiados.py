@@ -81,17 +81,38 @@ def carregar_clientes():
 
 def salvar_clientes(df):
 
-    df_salvar = df.copy()
-    
-    # PEQUENO AJUSTE: Transforma o número em texto brasileiro com vírgula antes de enviar
-    df_salvar["Limite"] = df_salvar["Limite"].apply(lambda x: f"{float(x):.2f}".replace(".", ","))
-    df_salvar["Divida"] = df_salvar["Divida"].apply(lambda x: f"{float(x):.2f}".replace(".", ","))
+    dados = [df.columns.tolist()]
 
-    dados = [df_salvar.columns.tolist()]
-    dados.extend(df_salvar.values.tolist())
+    dados.extend(df.values.tolist())
 
     aba_clientes.clear()
+
     aba_clientes.update(dados)
+
+    # Limpa o cache para forçar a leitura real apenas quando salvar algo novo
+    st.cache_data.clear() 
+
+# ==========================================
+# SESSION STATE (ALTERADO PARA BUSCA DINÂMICA)
+# ==========================================
+
+# Removemos a trava do st.session_state antigo para que o app leia o cache limpo
+st.session_state.clientes = carregar_clientes()
+
+# ==========================================
+# SALVAR PLANILHA
+# ==========================================
+
+def salvar_clientes(df):
+
+    dados = [df.columns.tolist()]
+
+    dados.extend(df.values.tolist())
+
+    aba_clientes.clear()
+
+    aba_clientes.update(dados)
+
     carregar_clientes.clear()
 
 # ==========================================
