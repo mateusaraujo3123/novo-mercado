@@ -95,3 +95,80 @@ except:
 # Tratamento e conversão correta dos dados financeiros vindos da planilha
 df_clientes["Divida"] = pd.to_numeric(df_clientes["Divida"], errors="coerce").fillna(0.0)
 df_clientes["Limite"] = pd.to_numeric(df_clientes["Limite"], errors="coerce").fillna(0.0)
+
+# ==========================================
+# CONTEÚDO VISUAL DO DASHBOARD
+# ==========================================
+
+# Cabeçalho Principal (Idêntico ao seu print)
+st.markdown("""
+    <div class="main-header">
+        <span>🛍️ MERCADINHO Portal Da Vila</span>
+        <span class="status-bd">🟢 online</span>
+    </div>
+""", unsafe_allow_html=True)
+
+# Botões de Atalho Superiores com Links para as Subpastas
+st.markdown("""
+    <div class="button-container">
+        <a href="/Gestao_de_Fiados" target="_self" class="purple-button">👥 PESSOAS</a>
+        <a href="/Tabelas_de_Preco" target="_self" class="purple-button">📦 PRODUTOS</a>
+        <a href="#" target="_self" class="purple-button">📋 CONTAS A RECEBER</a>
+    </div>
+""", unsafe_allow_html=True)
+    
+st.markdown("<br>", unsafe_allow_html=True)
+st.markdown("## Fluxo de Fiados & Devedores")
+
+# Seção Central Automatizada (2 colunas)
+col_centro1, col_centro2 = st.columns(2)
+
+with col_centro1:
+    st.subheader("Top Maiores Devedores (R$)")
+    
+    # Filtra apenas os clientes que estão devendo e ordena do maior para o menor
+    df_devedores = df_clientes[df_clientes["Divida"] > 0].sort_values(by="Divida", ascending=False)
+    
+    if df_devedores.empty:
+        st.info("Nenhuma dívida ativa registrada na planilha.")
+    else:
+        # Formata os valores exibidos na tabela central
+        df_exibir = df_devedores[["Nome", "Divida"]].copy()
+        df_exibir["Divida"] = df_exibir["Divida"].map("R$ %.2f".__mod__)
+        st.dataframe(df_exibir, use_container_width=True, hide_index=True)
+        
+with col_centro2:
+    st.subheader("⚠️ Alertas do Estoque")
+    # Mantido informativo até criarmos a aba de produtos
+    st.info("Nenhum produto cadastrado na planilha.")
+    
+st.markdown("---")
+
+# ==========================================
+# CÁLCULO E EXIBIÇÃO DE MÉTRICAS REAIS
+# ==========================================
+
+soma_fiados = df_clientes["Divida"].sum()
+
+# Identifica clientes que estouraram o limite configurado
+clientes_estourados = len(df_clientes[df_clientes["Divida"] > df_clientes["Limite"]])
+
+col_kpi1, col_kpi2, col_kpi3 = st.columns(3)
+
+with col_kpi1:
+    st.metric(
+        label="Soma Total de Fiados", 
+        value=f"R$ {soma_fiados:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    )
+    
+with col_kpi2:
+    st.metric(
+        label="Clientes Acima do Limite", 
+        value=str(clientes_estourados)
+    )
+    
+with col_kpi3:
+    st.metric(
+        label="Caixa Estimado do Dia", 
+        value="R$ 1.250,00" # Mantido fixo conforme imagem de referência
+    )
