@@ -126,15 +126,16 @@ with aba_lista:
 )
             }
         )
+        
         col1, col2 = st.columns(2)
-        with col1:
+
+with col1:
     if st.button(
         "💾 Salvar Alterações",
         use_container_width=True,
         type="primary",
         key="btn_salvar_prod"
     ):
-
         produtos_editados = produtos_editados.fillna("")
 
         produtos_editados["Preco"] = (
@@ -149,17 +150,14 @@ with aba_lista:
         ).fillna(0)
 
         salvar_produtos(produtos_editados)
-
         st.session_state.produtos = carregar_produtos()
-
         st.success("Tabela de preços atualizada com sucesso!")
-
         st.rerun()
-    
-        with col2:
-            if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
-                st.session_state.produtos = carregar_produtos()
-                st.rerun()
+
+with col2:
+    if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
+        st.session_state.produtos = carregar_produtos()
+        st.rerun(
 
 # ==========================================
 # ABA - CADASTRO DE NOVO PRODUTO
