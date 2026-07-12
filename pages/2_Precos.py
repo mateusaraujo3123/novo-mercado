@@ -135,6 +135,15 @@ with aba_lista:
         with col2:
             if st.button("🔄 Atualizar Lista", use_container_width=True, key="btn_att_prod"):
                 st.session_state.produtos = carregar_produtos()
+                    # Altere as últimas linhas de carregar_produtos() para manter como texto com vírgula na tela:
+    df["Preco"] = (
+        pd.to_numeric(df["Preco"].astype(str).str.replace(",", ".", regex=False), errors="coerce")
+        .fillna(0.0)
+        .map(lambda x: f"{x:.2f}".replace(".", ",")) # Entrega o dado formatado em PT-BR para o TextColumn
+    )
+
+    return df[["Produto", "Preco"]]
+
                 st.rerun()
 
 # ==========================================
