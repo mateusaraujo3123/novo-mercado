@@ -124,7 +124,6 @@ st.title("👥 Gestão de Clientes")
 
 st.divider()
 
-# Inclusão da nova aba "Adicionar Compra" no menu de abas
 aba_lista, aba_novo, aba_adicionar, aba_abater, aba_excluir = st.tabs(
     [
         "📋 Clientes",
@@ -334,8 +333,8 @@ with aba_adicionar:
                 key="sb_adicionar_compra"
             )
 
-            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values[0])
-            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values[0])
+            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values)
+            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values)
             disponivel = max(0.0, limite_atual - divida_atual)
 
             st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -354,7 +353,6 @@ with aba_adicionar:
 
         if confirmar_compra:
 
-            # Soma o novo valor na dívida existente do cliente
             df_atual.loc[df_atual["Nome"] == cliente_comprando, "Divida"] = divida_atual + valor_compra
             
             salvar_clientes(df_atual)
@@ -392,7 +390,7 @@ with aba_abater:
                 key="sb_abater_divida"
             )
 
-            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values[0])
+            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
             st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
             valor_pago = st.number_input(
