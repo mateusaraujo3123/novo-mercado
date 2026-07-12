@@ -62,10 +62,10 @@ planilha = conectar_planilha()
 aba_clientes = planilha.worksheet("Clientes")
 
 # ==========================================
-# CARREGAR CLIENTES
+# CARREGAR CLIENTES (AUMENTADO O TTL PARA 60 SEGUNDOS)
 # ==========================================
 
-@st.cache_data(ttl=5)
+@st.cache_data(ttl=60) # Altere de 5 para 60 para economizar acessos ao Google
 def carregar_clientes():
 
     dados = aba_clientes.get_all_records()
@@ -91,6 +91,30 @@ def carregar_clientes():
             df[coluna] = ""
 
     return df[colunas]
+
+# ==========================================
+# SALVAR PLANILHA
+# ==========================================
+
+def salvar_clientes(df):
+
+    dados = [df.columns.tolist()]
+
+    dados.extend(df.values.tolist())
+
+    aba_clientes.clear()
+
+    aba_clientes.update(dados)
+
+    # Limpa o cache para forçar a leitura real apenas quando salvar algo novo
+    st.cache_data.clear() 
+
+# ==========================================
+# SESSION STATE (ALTERADO PARA BUSCA DINÂMICA)
+# ==========================================
+
+# Removemos a trava do st.session_state antigo para que o app leia o cache limpo
+st.session_state.clientes = carregar_clientes()
 
 # ==========================================
 # SALVAR PLANILHA
