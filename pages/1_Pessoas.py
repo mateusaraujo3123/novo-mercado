@@ -241,7 +241,6 @@ with aba_lista:
         st.write("")
         st.subheader("📊 Gráfico de Maiores Devedores")
         
-        # Filtra os dados da tabela para remover vazios e pegar apenas quem deve acima de zero
         df_grafico = st.session_state.clientes.copy()
         df_grafico["Divida"] = pd.to_numeric(df_grafico["Divida"], errors="coerce").fillna(0.0)
         df_grafico = df_grafico[df_grafico["Divida"] > 0].sort_values(by="Divida", ascending=True)
@@ -249,10 +248,7 @@ with aba_lista:
         if df_grafico.empty:
             st.info("Nenhum cliente com dívida ativa para exibir no gráfico.")
         else:
-            # Prepara a tabela exclusivamente para o gráfico do Streamlit ler os eixos corretamente
             df_chart_data = df_grafico.set_index("Nome")[["Divida"]]
-            
-            # Desenha o gráfico de barras horizontal nativo elegante e limpo
             st.bar_chart(df_chart_data, horizontal=True, use_container_width=True)
 
 # ==========================================
@@ -352,8 +348,10 @@ with aba_adicionar:
                 lista_clientes
             )
 
-            divida_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Divida"].values)
-            limite_atual = float(df_atual[df_atual["Nome"] == cliente_comprando]["Limite"].values)
+            # Correção com .iloc[0] para extrair o valor de forma segura
+            linha_cliente = df_atual[df_atual["Nome"] == cliente_comprando]
+            divida_atual = float(pd.to_numeric(linha_cliente["Divida"], errors="coerce").fillna(0.0).iloc[0])
+            limite_atual = float(pd.to_numeric(linha_cliente["Limite"], errors="coerce").fillna(0.0).iloc[0])
             disponivel = max(0.0, limite_atual - divida_atual)
 
             st.info(f"Dívida Atual: R$ {divida_atual:,.2f} | Limite: R$ {limite_atual:,.2f} | Disponível: R$ {disponivel:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
@@ -408,7 +406,9 @@ with aba_abater:
                 lista_devedores
             )
 
-            divida_atual = float(df_devedores[df_devedores["Nome"] == cliente_pagando]["Divida"].values)
+            # Correção com .iloc[0] para extrair o valor de forma segura
+            linha_devedor = df_devedores[df_devedores["Nome"] == cliente_pagando]
+            divida_atual = float(pd.to_numeric(linha_devedor["Divida"], errors="coerce").fillna(0.0).iloc[0])
             st.warning(f"Dívida Atual deste cliente: R$ {divida_atual:,.2f}".replace(",", "X").replace(".", ",").replace("X", "."))
 
             valor_pago = st.number_input(
@@ -491,7 +491,7 @@ with aba_excluir:
                 st.rerun()
 
 # ==========================================
-# RODAPÉ
+# RODAPÉ (ORGANIZADO NA ORDEM EXATA)
 # ==========================================
 
 st.divider()
@@ -519,24 +519,3 @@ total_limite = (
 c1, c2, c3 = st.columns(3)
 
 with c1:
-    st.metric(
-        "Clientes",
-        total_clientes
-    )
-
-with c2:
-        with c2:
-            st.metric(
-                "Total em Fiados",
-                f"R$ {total_divida:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-
-        with c3:
-            st.metric(
-                "Limite Total",
-                f"R$ {total_limite:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
-            )
-
-st.divider()
-
-st.caption("Portal da Vila • Gestão de Clientes")
